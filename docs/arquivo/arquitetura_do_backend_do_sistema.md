@@ -1,4 +1,4 @@
-﻿> Documento HISTORICO (arquivado em 21/10/2026). Substituido por `PLANO_ARQUITETURA.md` na raiz.
+> Documento HISTORICO (arquivado em 21/10/2026). Substituido por `PLANO_ARQUITETURA.md` na raiz.
 > Decisoes que mudaram: RN01 (risco diario) saiu do MVP -> fase F6; RN06 (paywall) descartado;
 > maquina de estados de alerta descartada -> ver DECISIONS.md D-003; frontend agora e MapLibre -> D-001.
 # Documento de Arquitetura e Requisitos: Sistema de Monitoramento e PrevisÃ£o de Risco de IncÃªndio em UCs
