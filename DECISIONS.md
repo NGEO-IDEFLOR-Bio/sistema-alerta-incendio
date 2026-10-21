@@ -138,12 +138,21 @@ validade).
 `data/shapes_de_todas_as_unidades_com_gerencia.geojson` — 29 UCs, 9 gerências,
 `id` sequencial 1..29. Digest e procedência em `data/README.md`.
 
-⚠️ A sigla vem com **L minúsculo** no lugar do I romano (`GRCN-l`, `GRCN-ll`,
-`GRCN-lll`). **Normalização é obrigatória** no seed, com teste de integridade
-(29 UCs / 9 gerências) — sem isso o roteamento falha em silêncio. Issue #21.
+**Fonte oficial verificada (21/10/2026):** a página "Shapes de cada unidade" do portal
+IDEFLOR-Bio (<https://ideflorbio.pa.gov.br/shapes-de-cada-unidade>) publica exatamente
+as **9** gerências — GRA (2 UCs), GRB (4), GRCN-I (2), GRCN-II (5), GRCN-III (2),
+Marajó (2), GRNE (4), GRTUC (3), GRX (5) = **29**, casando 1:1 com o shapefile. O
+portal as chama "Região Administrativa" no menu. A estrutura do repo `maps`, que
+publicava GRMR, GRET, GRBA e GRT, **não tinha respaldo no cadastro oficial** e foi
+corrigida (commit `618feae`).
 
-O registry do repo `maps` (produção cartográfica) diverge do de gestão de UC e
-precisa ser atualizado — issue #22.
+⚠️ A sigla vem com **L minúsculo** no lugar do I romano (`GRCN-l`, `GRCN-ll`,
+`GRCN-lll`) — e o defeito está **no cadastro oficial**, não só no arquivo local: o
+portal grafa "Calha Norte l/ll/lll" e repete a mesma substituição em `UMF l/ll/lll`.
+**Normalização no seed é obrigatória**, com teste de integridade (29 UCs / 9 gerências)
+— sem isso o roteamento falha em silêncio. Issues #21 (corrigido localmente) e #29
+(correção upstream).
+
 
 ---
 

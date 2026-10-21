@@ -50,13 +50,19 @@
 - **Nenhum bloqueio técnico.** #01 resolvido, #21 resolvido.
 - **Pendências institucionais (não bloqueiam F1/F2):**
   - ~~#22 — registry de gerências do `maps`~~ ✅ **resolvido** em 21/10/2026
-    (`maps` commit `72b0eee`, push). `visualizador` verificado, sem resíduo.
+    (`maps` commits `72b0eee` e `618feae`, push).
+  - #29 — **sigla `GRCN-l/ll/lll` no cadastro oficial**: o defeito está no portal
+    IDEFLOR e no shapefile consolidado, não só no arquivo local. A cópia local foi
+    corrigida (#21), mas todo re-download reintroduz. Requer ação upstream.
+  - #30 — sigla **GRM** (Marajó) consta do shapefile, não da página "Shapes de cada
+    unidade".
   - #26 — curadoria por UC do que o plano diz sobre fogo em cada zona (preenche
     `ucs_zonas_decisao`, hoje vazia). Não bloqueia o MVP; habilita a feature de zona
     na frente A.
   - #24 — zoneamento para as 13 UCs restantes.
   - #25 — Zonas de Amortecimento para as UCs que não têm.
   - #07 — termos de uso/atribuição por fonte de focos.
+
 
 
 
