@@ -49,14 +49,15 @@
 
 - **Nenhum bloqueio técnico.** #01 resolvido, #21 resolvido.
 - **Pendências institucionais (não bloqueiam F1/F2):**
-  - #22 — o registry de gerências do repo `maps` está **desatualizado** (ainda lista
-    GRT, GRBA, GRET, GRMR). Precisa ser corrigido lá.
+  - ~~#22 — registry de gerências do `maps`~~ ✅ **resolvido** em 21/10/2026
+    (`maps` commit `72b0eee`, push). `visualizador` verificado, sem resíduo.
   - #26 — curadoria por UC do que o plano diz sobre fogo em cada zona (preenche
     `ucs_zonas_decisao`, hoje vazia). Não bloqueia o MVP; habilita a feature de zona
     na frente A.
   - #24 — zoneamento para as 13 UCs restantes.
   - #25 — Zonas de Amortecimento para as UCs que não têm.
   - #07 — termos de uso/atribuição por fonte de focos.
+
 
 
 
