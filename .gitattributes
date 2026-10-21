@@ -1,0 +1,21 @@
+# Normaliza line endings no repositorio (evita diff de CRLF/LF no Windows)
+* text=auto eol=lf
+
+# Binarios
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.webp binary
+*.woff2 binary
+*.woff binary
+*.ttf binary
+*.pdf binary
+*.apk binary
+*.sqlite binary
+*.parquet binary
+*.feather binary
+*.tif binary
+*.tiff binary
+*.cog binary
+*.pmtiles binary
