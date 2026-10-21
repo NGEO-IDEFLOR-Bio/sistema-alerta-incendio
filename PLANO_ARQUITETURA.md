@@ -162,12 +162,76 @@ config_alerta (
 );
 
 -- 5.6 Referência geográfica
-gerencias_regionais (id text primary key, nome text not null, ativa bool default true);
-ucs (id bigserial primary key, nome text, geom geometry(MultiPolygon,4326),
-      gerencia_id text references gerencias_regionais(id),   -- <- depende da issue #01
-      zona_amortecimento geometry(MultiPolygon,4326),
-      props jsonb);
+gerencias_regionais (
+  id       text primary key,          -- 'GRB', 'GRX', 'GRCN-I', ... (canônico)
+  nome     text not null,             -- 'Gerência Regional de Belém'
+  ativa    bool not null default true
+);
+ucs (
+  id        bigserial primary key,
+  nome      text not null,
+  geom      geometry(MultiPolygon,4326),
+  gerencia_id text not null references gerencias_regionais(id),
+  zona_amortecimento geometry(MultiPolygon,4326),   -- NULL onde não há ZA cartografada
+  props    jsonb
+);
+
+-- 5.7 Zonas de plano de manejo (camada de referência do IDEFLOR).
+--     É o que torna OBSERVÁVEL o "fogo de manejo": zonas de Manejo Florestal,
+--     Produção A/B, Uso Intensivo, Uso Comunitário etc. são onde a queima
+--     programada/manejo é permitida. Sem isso, o filtro de qualidade (§7) só chuta.
+--     IMPORTANTE: `sigla` NÃO é global — 'ZA' = 'Alta Intervenção' em Algodoal-Maiandeua
+--     e = 'Zonas de Amortecimento' em Trombetas. Usar `zona_norm` (texto normalizado),
+--     nunca `sigla`, para regra.
+ucs_zonas (
+  id        bigserial primary key,
+  uc_id     bigint references ucs(id),        -- resolvido por sobreposição espacial
+  sigla     text,                            -- código original do zoneamento
+  zona      text,                            -- texto original
+  zona_norm text,                            -- texto normalizado (lower, sem acento, colapsado)
+  classe    text,                            -- 'manejo' | 'amortecimento' | 'protecao' | ...
+  area_ha   numeric,
+  geom      geometry(Polygon,4326)
+);
 ```
+
+### 5.8 Camada de referência (entradas e proveniência)
+
+| Arquivo | Registros | Uso |
+| :--- | :--- | :--- |
+| `data/shapes_de_todas_as_unidades_com_gerencia.geojson` | 29 UCs com `gerencia` + `id` 1..29 | `ucs` |
+| `visualizador/data/zoneamentos_ucs_estaduais.geojson` | 252 zonas em **16** das 29 UCs | `ucs_zonas` |
+| `visualizador/data/concessoes_florestais_ideflor.geojson` | 11 concessões | feature de risco (frente A) |
+| `visualizador/data/contratos_de_transicao.geojson` | 43 contratos de transição | feature de risco (frente A) |
+| `visualizador/data/{terras_indigenas,quilombos_*,regioes_integracao}.geojson` | contexto | camadas do mapa |
+
+**Gerências (DGMUC) — 9, cobrindo as 29 UCs:**
+
+| id | nome | UCs |
+| :--- | :--- | :--: |
+| `GRCN-I` | Gerência Regional da Calha Norte I | 2 |
+| `GRCN-II` | Gerência Regional da Calha Norte II | 5 |
+| `GRCN-III` | Gerência Regional da Calha Norte III | 2 |
+| `GRB` | Gerência Regional de Belém | 4 |
+| `GRTUC` | Gerência Regional de Tucuruí | 3 |
+| `GRA` | Gerência Regional do Araguaia | 2 |
+| `GRM` | Gerência Regional do Marajó | 2 |
+| `GRNE` | Gerência Regional do Nordeste | 4 |
+| `GRX` | Gerência Regional do Xingu | 5 |
+
+> ⚠️ **Normalização obrigatória no seed:** a sigla vem como `GRCN-l`, `GRCN-ll`,
+> `GRCN-lll` (L minúsculo no lugar do I romano — artefato de digitação/OCR). Se não for
+> normalizado, `GRCN-I` e `GRCN-l` viram **duas** gerências e o roteamento falha em
+> silêncio, sem erro em lugar nenhum. Issue #21.
+
+**Join das zonas → UCs: por SOBREPOSIÇÃO ESPACIAL, nunca por nome.** O campo `UNIDADE`
+do zoneamento está **truncado** ("Ambiental da Ilha de Combu", "Reserva Biológica do
+Maicuru (REBIO") e não casa com o nome da UC. Issue #23.
+
+**Cobertura:** o zoneamento cobre **16 das 29 UCs**. As 13 restantes **não têm**
+classificação de zona → para elas, a distinção manejo/floresta é desconhecida e o filtro
+de qualidade precisa degradar com honestidade (issue #24).
+
 
 > **Nota de precisão:** `raio_pixel_m` existe porque a posição do foco é **o centro de
 > um pixel**, não uma coordenada de precisão. A interface deve mostrar o círculo de
@@ -206,8 +270,15 @@ Configuração por gerência (`config_alerta`), regras avaliadas a cada ciclo:
 **Filtro de qualidade (obrigatório, e é o que define a confiança do sistema):**
 - 1 foco isolado, diurno, em área de pasto/capim → suprimir (ruído).
 - N focos em janela curta, mesma área → **confirmar** (início de incêndio).
-- Sobreposição com área de manejo/fogo programado → marcar como *manejado*, não alertar.
+- Sobreposição com **zona de manejo** do plano de manejo da UC (`ucs_zonas`, classe
+  `manejo`: Zona de Manejo Florestal, Produção A/B, Uso Intensivo, Uso Comunitário) →
+  marcar como *manejado*, não alertar. **Isto só é possível porque existe o layer de
+  zoneamento** (§5.7) — sem ele, essa linha seria chute.
+- Foco dentro de **Zona de Amortecimento** (Trombetas, REVIS, Paru, Faro — poucas UCs
+  têm ZA cartografada) → severidade menor que dentro do limite da UC.
 - Chuva recente na célula → reduzir severidade.
+- UCs **sem zoneamento** (13 de 29) → o sistema **não sabe** se é manejo ou floresta;
+  degradar o comportamento e registrar a limitação, não assumir.
 
 > Sem esse filtro, o sistema queima a confiança da gerência em poucas semanas.
 > Ver `AGENTS.md` → Regras de domínio.
@@ -330,10 +401,14 @@ mapa retrospectivo + drivers SHAP globais.
 
 | # | Risco | Mitigação |
 | :--- | :--- | :--- |
-| R1 | **Mapeamento UC → gerência inexistente** | issue #01 — dependência institucional (DGMUC) |
-| R2 | Falso positivo derruba a confiança | filtro de qualidade §7 antes de qualquer entrega |
+| R1 | ~~Mapeamento UC → gerência inexistente~~ **RESOLVIDO** | `data/shapes_de_todas_as_unidades_com_gerencia.geojson` (29 UCs, 9 gerências). Ver issue #21 (normalização de sigla) e #22 (registry divergente no `maps`) |
+| R1b | Sigla `GRCN-l` × `GRCN-I` criam gerências fantasma | Normalizar no seed; **teste de integridade** que exija 29 UCs e 9 gerências (#21) |
+| R1c | `SIGLA` do zoneamento não é global (`ZA` = 2 coisas diferentes) | Regra sempre por `zona_norm`, nunca por `sigla` (#23) |
+| R2 | Falso positivo derruba a confiança | filtro de qualidade §7 antes de qualquer entrega; zoneamento §5.7 |
 | R3 | Promessa de tempo real não se sustenta | comunicar "detecção NRT ≤1 h" + "risco diário"; nunca "previsão em tempo real" |
 | R4 | Chave/licença de fonte de focos | registrar termos por fonte → issue #07 |
 | R5 | Volume de tiles / custo de raster | titiler+COG com pyramid; cache; só janelas úteis |
 | R6 | Uso offline em campo sem sinal | service worker + Pacote da UC |
 | R7 | Deploy/credencial em ambiente institucional | `.env` por ambiente; nada sensível no git (D-003, D-006) |
+| R8 | Zoneamento cobre só 16/29 UCs | degradação explícita no filtro; buscar completar (#24) |
+

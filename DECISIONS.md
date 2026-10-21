@@ -128,14 +128,46 @@ validade).
 
 ## D-007 — Roteamento do alerta é por Gerência Regional (DGMUC)
 
-**Data:** 21/10/2026 · **Status:** vigente, **bloqueado por dependência institucional**
+**Data:** 21/10/2026 · **Status:** vigente — **dependência resolvida**
 
 **O quê:** cada alerta é roteado à Gerência Regional que responde pela área.
 
 **Por quê:** é quem executa o protocolo de ação. Sem isso a notificação não tem dono.
 
-**Implica:** exige o **mapeamento UC → Gerência Regional (DGMUC)**, que hoje não existe
-estruturado em nenhum repo do NGEO → **issue #01 (bloqueante)**.
+**Implica:** o mapeamento UC → Gerência Regional (DGMUC) foi fornecido em
+`data/shapes_de_todas_as_unidades_com_gerencia.geojson` — 29 UCs, 9 gerências,
+`id` sequencial 1..29. Digest e procedência em `data/README.md`.
+
+⚠️ A sigla vem com **L minúsculo** no lugar do I romano (`GRCN-l`, `GRCN-ll`,
+`GRCN-lll`). **Normalização é obrigatória** no seed, com teste de integridade
+(29 UCs / 9 gerências) — sem isso o roteamento falha em silêncio. Issue #21.
+
+O registry do repo `maps` (produção cartográfica) diverge do de gestão de UC e
+precisa ser atualizado — issue #22.
+
+---
+
+## D-009 — O zoneamento de plano de manejo é a camada que torna "fogo de manejo" observável
+
+**Data:** 21/10/2026 · **Status:** vigente
+
+**O quê:** `visualizador/data/zoneamentos_ucs_estaduais.geojson` (252 zonas em 16 das
+29 UCs) entra no banco como `ucs_zonas` e é a referência para distinguir
+**queima programada** de **incêndio florestal**.
+
+**Por quê:** o confoundidor "fogo de manejo" é um dos maiores riscos metodológicos
+(D-002, frente A) e é também a maior fonte de falso positivo no alerta (§7 do plano).
+Sem o zoneamento, essa distinção é palpite. Com ele, vira **regra geométrica**.
+
+**Implica:**
+- Regra **nunca** pela `SIGLA`: `ZA` significa "Alta Intervenção" em Algodoal-Maiandeua
+  e "Zonas de Amortecimento" em Trombetas. Usar `zona_norm` (texto normalizado).
+  Issue #23.
+- Join UC ↔ zona por **sobreposição espacial** — o campo `UNIDADE` está truncado.
+- Cobre 16/29 UCs → nas 13 restantes o sistema **não sabe** e precisa degradar
+  explicitamente. Issue #24.
+- Zona de Amortecimento (ZA) existe para poucas UCs — não é universal. Issue #25.
+
 
 ---
 

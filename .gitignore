@@ -25,7 +25,8 @@ env/
 htmlcov/
 
 # ===== Dados e artefatos derivados =====
-data/
+data/*
+!data/README.md
 !data/.gitkeep
 artifacts/
 *.parquet

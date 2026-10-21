@@ -17,19 +17,43 @@ Tarefa: implementar a FASE F1 do plano.
 2. backend/ com pyproject.toml, estrutura src/ (api/, core/, db/, models/, workers/,
    adapters/, services/), settings via pydantic-settings lendo .env.
 3. Implementar o schema de PLANO_ARQUITETURA.md §5 como migração Alembic
-   (focos, eventos_fogo, alertas, entregas, config_alerta, gerencias_regionais, ucs).
-4. scripts/seed_gerencias.py: carga das 10 gerências regionais da DGMUC
-   (GERAL, GRCN-I, GRCN-II, GRX, GRB, GRMR, GRET, GRBA, GRT, GRA).
-5. GET /api/health devolvendo status do DB e versão do schema.
-6. .env.example já existe; não commitar .env real.
+   (focos, eventos_fogo, alertas, entregas, config_alerta, gerencias_regionais, ucs,
+   ucs_zonas).
+4. scripts/seed_gerencias.py: carga das 9 gerências DGMUC (PLANO_ARQUITETURA §5.8)
+   com NORMALIZAÇÃO OBRIGATÓRIA da sigla — o arquivo traz GRCN-l / GRCN-ll /
+   GRCN-lll (L minúsculo no lugar do I romano). Issue #21.
+5. scripts/seed_ucs.py: carga das 29 UCs de
+   data/shapes_de_todas_as_unidades_com_gerencia.geojson (EPSG:4326, MultiPolygon),
+   ligando uc.gerencia_id -> gerencias_regionais.id. NORMALIZAR o nome da UC
+   (o arquivo tem 'nome_' e 'name'; usar 'nome_'; 'name' parece truncado em alguns casos).
+6. scripts/seed_zonas.py: carga das 252 zonas de
+   H:\Meu Drive\DEV\visualizador\data\zoneamentos_ucs_estaduais.geojson.
+   - resolver uc_id por SOBREPOSIÇÃO ESPACIAL (centroide contido / maior área de
+     interseção), NUNCA pelo campo UNIDADE (está truncado) — issue #23
+   - gerar zona_norm (lower, sem acento, espaços colapsados)
+   - classificar em classe: 'manejo' | 'amortecimento' | 'protecao' | 'outro'
+     a partir de zona_norm (Manejo Florestal, Produção A/B, Uso Intensivo, Uso
+     Comunitário, Uso Extensivo -> manejo; Amortecimento -> amortecimento;
+     Preservação, Conservação, Proibida -> protecao)
+   - NÃO usar sigla para regra (ZA = duas coisas diferentes) — issue #23
+7. Teste de integridade do seed: exatamente 29 UCs, exatamente 9 gerências, e todo
+   uc.gerencia_id resolvido (issue #21). Falhar se não bater.
+8. GET /api/health devolvendo status do DB, versão do schema e contagens
+   (ucs, gerencias, zonas, zonas_sem_uc).
 
 Regras: ruff check . e ruff format --check . e pytest -q OK; docker compose config válido;
-NÃO buildar imagem de produção; atualizar ISSUES (#03, #04) e RETOMADA.md no mesmo commit;
+NÃO buildar imagem de produção; NÃO commitar .env nem dados (data/ é gitignored);
+atualizar ISSUES (#03, #04, #21, #23, #24) e RETOMADA.md no mesmo commit;
 commit pequeno + push.
 
-Atenção: issue #01 (mapeamento UC → gerência) está bloqueada e NÃO depende desta tarefa —
-deixe a coluna gerencia_id em ucs nullable e siga.
+Notas:
+- os arquivos de referência NÃO estão no git (data/ é ignorado). O seed deve ler de
+  data/ e de H:\Meu Drive\DEV\visualizador\data\, com caminho configurável por settings.
+- Docker Desktop e Google Drive não se dão bem: NÃO monte H:\Meu Drive no container.
+  O seed roda na host, contra o Postgres exposto em localhost.
+- O zoneamento cobre só 16/29 UCs — registrar a cobertura, não inventar.
 ```
+
 
 ---
 

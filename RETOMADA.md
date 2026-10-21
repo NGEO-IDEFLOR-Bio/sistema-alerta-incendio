@@ -7,23 +7,37 @@
 
 - **F0 (bootstrap) — ✅ concluída em 21/10/2026.**
   - `AGENTS.md`, `RETOMADA.md`, `ISSUES.md`, `TAREFAS.md`, `BUILD.md`, `DECISIONS.md`,
-    `PLANO_ARQUITETURA.md`, `.gitignore`, `.env.example` criados.
+    `PLANO_ARQUITETURA.md`, `.gitignore`, `.gitattributes`, `.env.example` criados.
   - Repo git inicializado; `.env` e `secrets/` **fora** do versionamento.
   - Arquitetura anterior movida para `docs/arquivo/arquitetura_do_backend_do_sistema.md`.
   - **Nenhum código escrito ainda.** Sem `backend/`, sem `frontend/`, sem docker-compose.
+- **Dados de referência recebidos (21/10/2026):**
+  - `data/shapes_de_todas_as_unidades_com_gerencia.geojson` — **29 UCs com gerência DGMUC**
+    (9 gerências), `id` 1..29, EPSG:4326. Digest e procedência em `data/README.md`.
+  - `visualizador/data/zoneamentos_ucs_estaduais.geojson` — **252 zonas de plano de manejo
+    em 16 UCs**. É o que torna "fogo de manejo" observável (D-009).
+  - ⚠️ **Dois problemas de qualidade que quebram em silêncio** (issues #21, #23):
+    sigla `GRCN-l/ll/lll` (L minúsculo no lugar do I romano) e `SIGLA` do zoneamento
+    não ser global (`ZA` = "Alta Intervenção" em uma UC, "Amortecimento" em outra).
 - **Decisões fechadas:** D-001 MapLibre · D-002 duas frentes em paralelo ·
   D-003 alerta termina na notificação, sem máquina de estados · D-004 todas as fontes ·
   D-005 DS compartilhado `ngeo-ds` · D-006 sistema ≠ pesquisa · D-007 roteamento por
-  gerência regional · D-008 latência-alvo ≤1 h na detecção, diário no risco.
+  gerência regional (**dependência resolvida**) · D-008 latência-alvo ≤1 h ·
+  D-009 zoneamento = camada de referência do fogo de manejo.
 - **Ativos já disponíveis no `.env`:** `DATABASE_URL` (PostGIS), `GEE_PROJECT_ID` +
   `GEE_CREDENTIALS_JSON`, `TUNNEL_TOKEN` (Cloudflare), e uma chave do Sentinel Hub em
   `secrets/`. `GEMINI_API_KEY` / `OPENROUTER_API_KEY` ficam para a frente A.
 
 ## Bloqueio
 
-- **#01 — mapeamento UC → Gerência Regional (DGMUC)** não existe estruturado.
-  Dependência institucional. Bloqueia o seed das UCs e o roteamento de alerta (F3),
-  **não** bloqueia F1/F2. Enquanto isso: `ucs.gerencia_id` fica nullable.
+- **Nenhum bloqueio técnico.** #01 foi resolvido com o arquivo de gerências.
+- **Pendências institucionais (não bloqueiam F1/F2):**
+  - #22 — o registry de gerências do repo `maps` está **desatualizado** (lista GRCN-III,
+    GRNE, GRTUC? não; ainda lista GRT, GRBA, GRET, GRMR). Precisa ser corrigido lá.
+  - #24 — zoneamento para as 13 UCs restantes.
+  - #25 — Zonas de Amortecimento para as UCs que não têm.
+  - #07 — termos de uso/atribuição por fonte de focos.
+
 
 ## Próximo passo (1 item)
 
