@@ -63,10 +63,17 @@ Se um comando ainda não existe: registre em `ISSUES.md` e **não** declare pron
 - **Alerta termina na notificação.** O NGEO detecta e avisa; o protocolo de ação é da
   Gerência Regional. O sistema **não** implementa fluxo de atendimento, estados nem
   responsabilização. (ver `DECISIONS.md` D-003)
+- **Nunca descartar um foco em silêncio.** Todo evento que toca uma UC **gera alerta**.
+  A incerteza é **declarada** (severidade, confiança, `possivel_falso_positivo`), nunca
+  escondida por supressão. Falso positivo não se resolve calando — resolve-se graduando
+  a confiança e entregando o contexto. (D-010)
+- **O sistema não julga o que é permitido.** Quem decide é o **plano de gestão da
+  unidade**. A zona do plano entra no alerta como contexto e ponteiro, **nunca** como
+  critério de supressão. (D-009)
+- **Não padronizar o zoneamento.** Cada plano de gestão nomeia e define as suas zonas;
+  `sigla` não é global. Guardar verbatim. (D-009)
 - **Posição de foco é pixel, não coordenada.** GOES-16 ~750 m, VIIRS 375 m. Sempre exiba a
   incerteza posicional; nunca afirme precisão que não existe.
-- **Falso positivo é ameaça existencial.** Sem controle de ruído (nuvem, fogo de manejo,
-  Capão/Bragança), o time da gerência para de confiar no sistema.
 - **Sombreamento é só do IDEFLOR.** Áreas de interesse do alerta: UCs estaduais + ZA.
 
 ## Economia de tokens

@@ -147,26 +147,65 @@ precisa ser atualizado — issue #22.
 
 ---
 
-## D-009 — O zoneamento de plano de manejo é a camada que torna "fogo de manejo" observável
+## D-009 — O zoneamento de plano de manejo é contexto que aponta para o plano, não filtro
+
+**Data:** 21/10/2026 · **Status:** vigente (revisado na mesma data)
+
+**O quê:** `visualizador/data/zoneamentos_ucs_estaduais.geojson` (252 zonas em 16 das
+29 UCs) entra no banco como `ucs_zonas`, com `sigla` e `zona` **verbatim**.
+
+**Por quê (duas razões):**
+
+1. **O sistema sempre alerta — mesmo em zona de manejo.** Quem diz o que pode ou não
+   pode é o **plano de gestão da unidade**, não o software. A zona entra no alerta como
+   *contexto e ponteiro* para o instrumento que governa aquela área, não como critério
+   de supressão. Suprimir alerta por zona seria o sistema decidindo o que é permitido —
+   competência que não é dele (coerente com D-003: o NGEO notifica, a gerência executa).
+2. **Não existe taxonomia global de zonas.** Cada plano de gestão nomeia e define as
+   suas próprias zonas. `SIGLA` não é global: `ZA` = "Alta Intervenção" em
+   Algodoal-Maiandeua e = "Zonas de Amortecimento" em Trombetas. Normalizar, mapear para
+   uma classe única ou casar por nome **destrói o significado** de cada plano.
+
+**Implica:**
+- `ucs_zonas` guarda os valores **como o plano os escreveu**. Sem `zona_norm`, sem
+  `classe` global, sem renomear nada.
+- Regra de negócio **nunca** usa `sigla` como chave. Issue #23.
+- Tabela nova `ucs_zonas_decisao`: **curadoria por UC**, feita pelo NGEO, com o que o
+  plano da *aquela* UC diz sobre fogo naquela zona. Não é padronização — é o
+  significado do plano, captado plano a plano. Começa vazia. Issue #26.
+- Join UC ↔ zona por **sobreposição espacial** (o campo `UNIDADE` está truncado).
+  Issue #23.
+- O alerta **cita a zona e o plano**: "Foco em <UC> — zona *<texto do plano>*.
+  O plano de gestão define o que é permitido ali; verificar antes de agir."
+- Zona de Amortecimento (ZA) existe para poucas UCs — não é universal. Issue #25.
+- **Só depois da curadoria** a zona pode virar *feature* da frente A (§10). Antes disso,
+  é contexto, não variável.
+
+---
+
+## D-010 — O sistema nunca descarta um foco em silêncio; ele classifica a confiança
 
 **Data:** 21/10/2026 · **Status:** vigente
 
-**O quê:** `visualizador/data/zoneamentos_ucs_estaduais.geojson` (252 zonas em 16 das
-29 UCs) entra no banco como `ucs_zonas` e é a referência para distinguir
-**queima programada** de **incêndio florestal**.
+**O quê:** todo evento de fogo que toca uma UC **gera alerta**. O que muda é a
+**severidade** e a **confiança** declaradas no alerta — não a existência do alerta.
 
-**Por quê:** o confoundidor "fogo de manejo" é um dos maiores riscos metodológicos
-(D-002, frente A) e é também a maior fonte de falso positivo no alerta (§7 do plano).
-Sem o zoneamento, essa distinção é palpite. Com ele, vira **regra geométrica**.
+**Por quê:** supressão silenciosa destrói confiança mais rápido que excesso de alerta.
+O gestor precisa poder confiar que "não recebi nada" significa "não houve nada", não
+"o filtro comeu". A fila é ordenada por severidade, então o ruído desce sozinho.
 
 **Implica:**
-- Regra **nunca** pela `SIGLA`: `ZA` significa "Alta Intervenção" em Algodoal-Maiandeua
-  e "Zonas de Amortecimento" em Trombetas. Usar `zona_norm` (texto normalizado).
-  Issue #23.
-- Join UC ↔ zona por **sobreposição espacial** — o campo `UNIDADE` está truncado.
-- Cobre 16/29 UCs → nas 13 restantes o sistema **não sabe** e precisa degradar
-  explicitamente. Issue #24.
-- Zona de Amortecimento (ZA) existe para poucas UCs — não é universal. Issue #25.
+- **Agregação ≠ supressão.** N focos do mesmo incêndio viram **um evento, um alerta**
+  (evita 20 e-mails do mesmo pixel). Isso é anti-spam, não supressão.
+- Todo alerta carrega: nº de focos, fontes concordantes, persistência temporal,
+  e a flag `possivel_falso_positivo` quando o sinal é fraco (foco isolado, diurno).
+- Severidade é **graduada**, não binária: `baixa` (sinal fraco, possível falso positivo)
+  → `critica` (múltiplos focos, persistência, concordância entre fontes).
+- Filtros de **geometria/qualidade** (nuvem, chuva recente) continuam, mas só para
+  **qualificar a confiança**, nunca para descartar.
+- Coerente com D-003 e D-009: o sistema **informa e qualifica**; a decisão é do
+  gestor, com base no plano.
+
 
 
 ---

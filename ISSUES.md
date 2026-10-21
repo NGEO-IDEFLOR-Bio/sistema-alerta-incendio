@@ -22,11 +22,14 @@
 
 | # | Issue | Status | Nota |
 | :--- | :--- | :--- | :--- |
-| **#21** | Normalizar sigla de gerência (`GRCN-l`/`ll`/`lll` → `GRCN-I`/`II`/`III`) | 🔴 **alta** | O arquivo traz **L minúsculo** no lugar do I romano. Sem normalizar, o seed cria 3 gerências fantasma e o roteamento falha **em silêncio**. Teste de integridade: 29 UCs, 9 gerências. |
+| **#21** | Sigla de gerência com L minúsculo (`GRCN-l`/`ll`/`lll`) | ✅ **resolvido** | Corrigido **no arquivo** em 21/10/2026: `CALHA NORTE l/ll/lll` → `I/II/III` no nome e na sigla. 29 features e geometria intactas. Digest original e corrigido em `data/README.md`. O seed mantém a validação 29 UCs / 9 gerências, porque o arquivo original volta da instituição. |
 | **#22** | Registry de gerências divergente entre `maps` e o arquivo atual | 🟡 pendente | `maps/organize_and_build.py` + README listam 9 gerências de **produção cartográfica** (GRCN-I, GRCN-II, GRX, GRB, GRMR, GRET, GRBA, GRT, GRA + escopo GERAL). O arquivo atual é o de **gestão de UC**: GRCN-I, GRCN-II, **GRCN-III**, GRB, **GRTUC**, GRA, **GRM**, **GRNE**, GRX. Diferenças: GRCN-III, GRNE, GRTUC são novos; GRMR→GRM; GRT/GRBA/GRET não existem mais. **Atualizar o `maps`** para não publicar estrutura de gerência desatualizada. |
-| **#23** | Zoneamento: normalizar e resolver por sobreposição espacial | 🔴 **alta** | `SIGLA` **não é global**: `ZA` = "Alta Intervenção" em Algodoal-Maiandeua e = "Zonas de Amortecimento" em Trombetas. `ZONA` é texto livre com inconsistência de acento/caixa ("Alta Intervencao", "Zonas de Amortecimentos"). `UNIDADE` está **truncado** ("Ambiental da Ilha de Combu", "Reserva Biológica do Maicuru (REBIO"). → regra sempre por `zona_norm`; join por **sobreposição espacial**, nunca por nome. |
-| **#24** | Zoneamento cobre só 16 das 29 UCs | 🟡 pendente | 13 UCs sem classificação de zona → o sistema não sabe distinguir manejo de floresta. Degradar com honestidade + pedir as 13 restantes à DGMUC. |
+| **#23** | Zoneamento: `SIGLA` não é global; `UNIDADE` truncada; join por nome inviável | 🟡 **parcial** | **Não padronizar** (D-009): cada plano de gestão nomeia e define as suas próprias zonas; taxonomia global destruiria o significado. `sigla` e `zona` ficam **verbatim**. Join UC↔zona por **sobreposição espacial** — `UNIDADE` está truncado ("Ambiental da Ilha de Combu", "Reserva Biológica do Maicuru (REBIO"). Regra de negócio **nunca** por `sigla`. |
+| **#26** | Curadoria por UC do que o plano diz sobre fogo em cada zona | 🔴 **alta** | Tabela `ucs_zonas_decisao` (PLANO §5.8) — preenchida pelo NGEO, **começa vazia**, uma linha por (UC, zona): `permite_queima`, `observacao`, `ref_plano`, `curado_por`. Não é padronização: é o significado do plano, plano a plano. **Não bloqueia o MVP**; é o que habilita a feature de zona na frente A (§10). |
+| **#27** | Alerta deve citar o plano de gestão quando o foco cai em zona | 🟡 pendente | Requisito de conteúdo do alerta (D-009): `zona_sigla`, `zona_texto`, `ref_plano` verbatim. Quando a UC não tem zoneamento → alerta **sem** contexto de zona + limitação explícita, nunca com suposição |
+| **#24** | Zoneamento cobre só 16 das 29 UCs | 🟡 pendente | 13 UCs sem classificação de zona → alerta segue emitido **sem** contexto de zona (nunca suprimido). Degradar com honestidade + pedir as 13 restantes à DGMUC. |
 | **#25** | Zonas de Amortecimento só para poucas UCs | 🟡 pendente | ZA cartografada em Trombetas, REVIS (setores I/II/III), Paru, Faro. Issue #15 original: **parcialmente resolvida** — ZA não é universal. |
+
 
 
 ## Identidade visual / DS

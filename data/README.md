@@ -7,10 +7,30 @@ grandes que não devem entrar no histórico do repositório.
 
 | Arquivo | Origem | SHA-256 | Bytes |
 | :--- | :--- | :--- | :--- |
-| `shapes_de_todas_as_unidades_com_gerencia.geojson` | Fornecido pelo NGEO (IDEFLOR-Bio), 21/10/2026 | `ce592a39adb69b8da1551efe1f30813ce37288f4ab40ca38ebee1908cb03f819` | 6.883.607 |
+| `shapes_de_todas_as_unidades_com_gerencia.geojson` **(original, como recebido)** | Fornecido pelo NGEO (IDEFLOR-Bio), 21/10/2026 | `ce592a39adb69b8da1551efe1f30813ce37288f4ab40ca38ebee1908cb03f819` | 6.883.607 |
+| `shapes_de_todas_as_unidades_com_gerencia.geojson` **(corrigido, em uso)** | idem + correção da sigla (issue #21) | `46b0128bc8aa40da5373a5915e20e303dd941c600ecbfab328272b6a8d828b08` | 6.883.607 |
 
 **Conteúdo:** 29 UCs estaduais do IDEFLOR-Bio, MultiPolygon EPSG:4326 (SIRGAS 2000),
 com atributo `gerencia` (Gerência Regional DGMUC) e `id` sequencial 1..29.
+
+### Correção aplicada (21/10/2026) — issue #21
+
+A sigla vinha com **L minúsculo** no lugar do **I** romano:
+
+| original | corrigido | UCs |
+| :--- | :--- | :--: |
+| `GERÊNCIA REGIONAL DA CALHA NORTE l (GRCN-l)` | `... CALHA NORTE I (GRCN-I)` | 2 |
+| `GERÊNCIA REGIONAL DA CALHA NORTE ll (GRCN-ll)` | `... CALHA NORTE II (GRCN-II)` | 5 |
+| `GERÊNCIA REGIONAL DA CALHA NORTE lll (GRCN-lll)` | `... CALHA NORTE III (GRCN-III)` | 2 |
+
+Substituição literal de string, **sem tocar em geometria, atributos ou ordem das
+features** (29 features preservadas; contagem de bytes idêntica). Nenhum outro valor
+`gerencia` foi afetado — o `L` das demais é de "REGIONAL".
+
+> O seed **normaliza de novo** ao carregar, porque o arquivo original volta da
+> instituição. A validação de 29 UCs / 9 gerências é o que garante que a correção
+> não se perca na próxima carga.
+
 
 ## Fonte canônica de geometrias
 

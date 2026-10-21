@@ -116,6 +116,8 @@ eventos_fogo (
 );
 
 -- 5.3 Alerta: registro imutável do que foi notificado.
+--     Sempre emitido quando o evento toca uma UC (D-010). A incerteza é declarada,
+--     nunca escondida por supressão.
 alertas (
   id              uuid primary key default gen_random_uuid(),
   evento_fogo_id  bigint references eventos_fogo(id),
@@ -125,6 +127,15 @@ alertas (
   uc_id           bigint,
   uc_nome         text,
   severidade      text not null,          -- baixa | media | alta | critica
+  confianca       text not null,          -- alta | media | baixa
+  possivel_falso_positivo boolean not null default false,
+  n_focos         int not null,
+  fontes_concordantes text[],             -- ex.: {FIRMS_VIIRS, GOES16}
+  -- contexto do plano de gestão (verbatim; pode ser nulo)
+  zona_sigla      text,
+  zona_texto      text,
+  ref_plano       text,
+  zona_disponivel boolean not null default false,  -- false = UC sem zoneamento
   regra_id        text not null,
   titulo          text not null,
   mensagem        text not null,
@@ -177,25 +188,37 @@ ucs (
 );
 
 -- 5.7 Zonas de plano de manejo (camada de referência do IDEFLOR).
---     É o que torna OBSERVÁVEL o "fogo de manejo": zonas de Manejo Florestal,
---     Produção A/B, Uso Intensivo, Uso Comunitário etc. são onde a queima
---     programada/manejo é permitida. Sem isso, o filtro de qualidade (§7) só chuta.
---     IMPORTANTE: `sigla` NÃO é global — 'ZA' = 'Alta Intervenção' em Algodoal-Maiandeua
---     e = 'Zonas de Amortecimento' em Trombetas. Usar `zona_norm` (texto normalizado),
---     nunca `sigla`, para regra.
+--     VERBATIM. Cada plano de gestão nomeia e define as suas próprias zonas —
+--     NÃO existe taxonomia global e nada aqui é padronizado (D-009).
+--     `sigla` NÃO é global: 'ZA' = 'Alta Intervenção' em Algodoal-Maiandeua
+--     e = 'Zonas de Amortecimento' em Trombetas. Nunca usar como chave de regra.
 ucs_zonas (
   id        bigserial primary key,
   uc_id     bigint references ucs(id),        -- resolvido por sobreposição espacial
-  sigla     text,                            -- código original do zoneamento
-  zona      text,                            -- texto original
-  zona_norm text,                            -- texto normalizado (lower, sem acento, colapsado)
-  classe    text,                            -- 'manejo' | 'amortecimento' | 'protecao' | ...
+  sigla     text,                            -- código original do zoneamento (verbatim)
+  zona      text,                            -- texto original do plano (verbatim)
   area_ha   numeric,
   geom      geometry(Polygon,4326)
 );
+
+-- 5.8 Curadoria por UC (preenchida pelo NGEO, começa vazia).
+--     NÃO é padronização: é o que o plano de gestão DAQUELA UC diz sobre fogo
+--     NAQUELA zona. Fonte de verdade = o plano, não um taxonomy inventado.
+ucs_zonas_decisao (
+  id          bigserial primary key,
+  uc_id       bigint not null references ucs(id),
+  sigla       text not null,                 -- igual ao da zona, sem normalizar
+  zona_texto  text,                          -- texto do plano, verbatim
+  permite_queima bool,                       -- null = ainda não curado
+  observacao  text,                          -- nota do curador
+  ref_plano   text,                          -- onde está o plano (documento/seção)
+  curado_por  text,
+  curado_em   timestamptz,
+  unique (uc_id, sigla)
+);
 ```
 
-### 5.8 Camada de referência (entradas e proveniência)
+### 5.9 Camada de referência (entradas e proveniência)
 
 | Arquivo | Registros | Uso |
 | :--- | :--- | :--- |
@@ -219,18 +242,19 @@ ucs_zonas (
 | `GRNE` | Gerência Regional do Nordeste | 4 |
 | `GRX` | Gerência Regional do Xingu | 5 |
 
-> ⚠️ **Normalização obrigatória no seed:** a sigla vem como `GRCN-l`, `GRCN-ll`,
-> `GRCN-lll` (L minúsculo no lugar do I romano — artefato de digitação/OCR). Se não for
-> normalizado, `GRCN-I` e `GRCN-l` viram **duas** gerências e o roteamento falha em
-> silêncio, sem erro em lugar nenhum. Issue #21.
+> ✅ **Issue #21 resolvida no arquivo.** A sigla vinha como `GRCN-l`, `GRCN-ll`,
+> `GRCN-lll` (L minúsculo no lugar do I romano). O arquivo foi corrigido em 21/10/2026
+> (digest original e digest corrigido registrados em `data/README.md`). O seed ainda
+> valida 29 UCs / 9 gerências, porque o arquivo original volta da instituição.
 
 **Join das zonas → UCs: por SOBREPOSIÇÃO ESPACIAL, nunca por nome.** O campo `UNIDADE`
 do zoneamento está **truncado** ("Ambiental da Ilha de Combu", "Reserva Biológica do
 Maicuru (REBIO") e não casa com o nome da UC. Issue #23.
 
 **Cobertura:** o zoneamento cobre **16 das 29 UCs**. As 13 restantes **não têm**
-classificação de zona → para elas, a distinção manejo/floresta é desconhecida e o filtro
-de qualidade precisa degradar com honestidade (issue #24).
+classificação de zona → o alerta segue sendo emitido, apenas **sem contexto de zona**,
+e o campo `zona_texto` fica nulo com a limitação explícita. Issue #24.
+
 
 
 > **Nota de precisão:** `raio_pixel_m` existe porque a posição do foco é **o centro de
@@ -267,18 +291,32 @@ Configuração por gerência (`config_alerta`), regras avaliadas a cada ciclo:
 | `RISCO_ALTO` | score da frente A acima do limiar da gerência | por faixa de score |
 | `PROPAGACAO` | frente B estima alcance da UC | por tempo até o limite |
 
-**Filtro de qualidade (obrigatório, e é o que define a confiança do sistema):**
-- 1 foco isolado, diurno, em área de pasto/capim → suprimir (ruído).
-- N focos em janela curta, mesma área → **confirmar** (início de incêndio).
-- Sobreposição com **zona de manejo** do plano de manejo da UC (`ucs_zonas`, classe
-  `manejo`: Zona de Manejo Florestal, Produção A/B, Uso Intensivo, Uso Comunitário) →
-  marcar como *manejado*, não alertar. **Isto só é possível porque existe o layer de
-  zoneamento** (§5.7) — sem ele, essa linha seria chute.
-- Foco dentro de **Zona de Amortecimento** (Trombetas, REVIS, Paru, Faro — poucas UCs
-  têm ZA cartografada) → severidade menor que dentro do limite da UC.
-- Chuva recente na célula → reduzir severidade.
-- UCs **sem zoneamento** (13 de 29) → o sistema **não sabe** se é manejo ou floresta;
-  degradar o comportamento e registrar a limitação, não assumir.
+**Qualificação da confiança (obrigatória — e é o que substitui a supressão, D-010):**
+
+O sistema **nunca descarta um foco em silêncio**. Todo evento que toca uma UC **gera
+alerta**. O que muda é a severidade e a confiança declaradas:
+
+| sinal observado | severidade | `possivel_falso_positivo` |
+| :--- | :--- | :--- |
+| 1 foco isolado, diurno, sem concordância entre fontes | `baixa` | sim |
+| 1 foco, noturno, fonte única | `media` | sim |
+| N focos em janela curta, mesma área | `alta` | não |
+| N focos + persistência temporal + concordância entre fontes | `critica` | não |
+
+**Agregação ≠ supressão.** N focos do mesmo incêndio viram **um evento, um alerta**
+(anti-spam, não descarte). Filtros de geometria e qualidade (nuvem, chuva recente,
+fogo possivelmente de manejo) **qualificam a confiança**; nunca descartam.
+
+**A zona do plano de gestão entra como contexto, nunca como critério:**
+
+- Foco dentro de uma zona de plano de manejo → **alerta é emitido do mesmo jeito**.
+- O alerta carrega `zona_sigla`, `zona_texto` (verbatim do plano) e `ref_plano`.
+- Mensagem: *"Foco em <UC> — zona *<texto do plano>*. O plano de gestão da UC define o
+  que é permitido ali; verificar antes de agir."*
+- **O sistema não julga** o que é permitido — o plano diz (D-009). Coerente com D-003.
+- Se a UC **não tem** zoneamento (13 de 29), o alerta é emitido **sem contexto de zona**,
+  com a limitação explícita, e não com suposição.
+
 
 > Sem esse filtro, o sistema queima a confiança da gerência em poucas semanas.
 > Ver `AGENTS.md` → Regras de domínio.
@@ -294,8 +332,14 @@ Registry de canais, todos com log em `entregas`:
 | `whatsapp` | canal operacional no campo | Meta Cloud API; exige URL pública — o **Cloudflare Tunnel** já configurado no `.env` resolve |
 | `webhook` | integração com sistemas da gerência | genérico |
 
-Template padrão: *o que* (foco/pixel, com incerteza), *onde* (UC, coordenada, link no mapa),
-*quando*, *severidade*, *confiança* (nº de focos, fontes, Agreement), *quem é o responsável*.
+Template padrão: *o que* (foco/pixel, com incerteza), *onde* (UC, zona do plano se
+conhecida, coordenada, link no mapa), *quando*, *severidade*, *confiança* (nº de focos,
+fontes concordantes, flag de possível falso positivo), *plano a consultar* (quando a UC
+tem zoneamento), *quem é o responsável*.
+
+**O template não julga.** Se o foco cai em zona de plano de manejo, a mensagem diz qual
+zona é e que o plano define o que é permitido ali — e entrega o alerta normalmente
+(D-009, D-010).
 
 ## 9. Frontend — MapLibre GL JS
 
@@ -342,6 +386,13 @@ Template padrão: *o que* (foco/pixel, com incerteza), *onde* (UC, coordenada, l
   combustível (WorldCover/MapBiomas), distância a contratos de transição *(pasto em pousio =
   capim seco = combustível)*, distância a concessões *(TIPO A = pressão alta)*, borda de UC,
   estradas, distância a TI/quilombos, histórico de queima, densidade de raios.
+- **Zonas de plano de manejo: só depois da curadoria** (§5.8, D-009). Enquanto o NGEO não
+  tiver preenchido `ucs_zonas_decisao`, a zona **não entra como feature** — nem como
+  classe, nem por texto. Sem curadoria, qualquer encoding do texto da zona seria
+  interpretar o plano, e é exatamente isso que não se deve fazer. Depois da curadoria,
+  `permite_queima` por (UC, zona) é a feature que resolve o rótulo de fogo de manejo —
+  vinda do plano, não de mineração de texto.
+
 - **Modelo:** XGBoost/LightGBM. **Validação:** *block CV espacial* + holdout temporal —
   nunca split aleatório sobre pixels (vazamento espacial).
 - **Calibração:** isotônica/Platt → o número em % precisa significar algo.
@@ -401,14 +452,17 @@ mapa retrospectivo + drivers SHAP globais.
 
 | # | Risco | Mitigação |
 | :--- | :--- | :--- |
-| R1 | ~~Mapeamento UC → gerência inexistente~~ **RESOLVIDO** | `data/shapes_de_todas_as_unidades_com_gerencia.geojson` (29 UCs, 9 gerências). Ver issue #21 (normalização de sigla) e #22 (registry divergente no `maps`) |
-| R1b | Sigla `GRCN-l` × `GRCN-I` criam gerências fantasma | Normalizar no seed; **teste de integridade** que exija 29 UCs e 9 gerências (#21) |
-| R1c | `SIGLA` do zoneamento não é global (`ZA` = 2 coisas diferentes) | Regra sempre por `zona_norm`, nunca por `sigla` (#23) |
-| R2 | Falso positivo derruba a confiança | filtro de qualidade §7 antes de qualquer entrega; zoneamento §5.7 |
+| R1 | ~~Mapeamento UC → gerência inexistente~~ **RESOLVIDO** | `data/shapes_de_todas_as_unidades_com_gerencia.geojson` (29 UCs, 9 gerências). Issue #21 resolvida no arquivo |
+| R1b | Sigla `GRCN-l` × `GRCN-I` criam gerências fantasma | ✅ corrigido no arquivo (21/10/2026); seed mantém validação 29 UCs / 9 gerências (#21) |
+| R1c | `SIGLA` do zoneamento não é global (`ZA` = 2 coisas diferentes) | Regra **nunca** por `sigla`; sem taxonomia global (D-009, #23) |
+| R2 | Falso positivo derruba a confiança | **Nunca descartar em silêncio** (D-010): severidade graduada + `possivel_falso_positivo` + citação do plano |
+| R2b | Sistema decidir o que é permitido | Não decidir: citar a zona e o plano (D-009, D-003) |
 | R3 | Promessa de tempo real não se sustenta | comunicar "detecção NRT ≤1 h" + "risco diário"; nunca "previsão em tempo real" |
 | R4 | Chave/licença de fonte de focos | registrar termos por fonte → issue #07 |
 | R5 | Volume de tiles / custo de raster | titiler+COG com pyramid; cache; só janelas úteis |
 | R6 | Uso offline em campo sem sinal | service worker + Pacote da UC |
 | R7 | Deploy/credencial em ambiente institucional | `.env` por ambiente; nada sensível no git (D-003, D-006) |
-| R8 | Zoneamento cobre só 16/29 UCs | degradação explícita no filtro; buscar completar (#24) |
+| R8 | Zoneamento cobre só 16/29 UCs | alerta segue emitido **sem** contexto de zona, com limitação explícita (#24) |
+| R9 | Curadoria de zonas atrasa e trava a frente A | `ucs_zonas_decisao` começa vazia e **não bloqueia** o MVP (#26) |
+
 
