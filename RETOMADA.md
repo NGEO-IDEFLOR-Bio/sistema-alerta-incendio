@@ -66,15 +66,22 @@
 
 ## Próximo passo (1 item)
 
-1. **T1 — Fundação local**: `docker-compose.yml` (PostGIS + Redis), estrutura `backend/`,
-   migração Alembic do schema (PLANO_ARQUITETURA §5), seed das 9 gerências DGMUC + 29 UCs
-   + 252 zonas (verbatim), `/api/health`.
-   Prompt pronto em `TAREFAS.md` → T1.
+1. **T0 — Estado da arte, decisões de fonte de dados e primeira coleta real.**
+   Antes de escrever o backend: (a) levantar o que já existe — produtos de detecção
+   NRT, modelos de risco, métodos de propagação, datasets de entrada, sistemas de
+   alerta existentes no Brasil/Amazônia, e qual é a lacuna real do NGEO; (b) decidir
+   fonte primária de focos, fallbacks e o schema canônico definitivo; (c) **provar a
+   cadeia com uma coleta real** (`scripts/probe_firms.py`) e registrar o schema
+   observado, não o documentado.
+   Entregável: `docs/ESTADO_DA_ARTE.md` + decisões em `DECISIONS.md` + o probe.
+   Prompt pronto em `TAREFAS.md` → T0.
 
-## Próximos depois do T1
+## Próximos depois da T0
 
-T2 (ingestão multi-fonte + dedup) → T3 (motor de regras) → T4 (entrega) → T5 (frontend).
+T1 (foundation: PostGIS + Redis + schema + seed) → T2 (ingestão multi-fonte + dedup)
+→ T3 (motor de regras) → T4 (entrega) → T5 (frontend).
 **Frente A (T6/T7) e Frente B (F7) entram em paralelo** a partir de F6.
+
 
 ## Fora de escopo (agora)
 

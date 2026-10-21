@@ -5,6 +5,68 @@
 
 ---
 
+## T0 — Estado da arte, decisões de fonte de dados e primeira coleta real
+
+```text
+Contexto: repo H:\Meu Drive\DEV\sistema_alerta_incendio. Leia AGENTS.md, RETOMADA.md,
+ISSUES.md, DECISIONS.md, PLANO_ARQUITETURA.md e README.md. Remote: origin/main.
+
+Tarefa: ANTES de escrever o backend, saber o que já existe e provar que a cadeia de
+dados funciona de ponta a ponta.
+
+1. ESTADO DA ARTE — produzir docs/ESTADO_DA_ARTE.md, com fontes citadas (URL + data
+   de acesso). Cobrir:
+   a. Detecção de fogo NRT: NASA FIRMS (MODIS/VIIRS/GOES), INPE MONITORQUEIMADAS,
+      MapBiomas Alerta e Fogo, GOES-16 (produtos de hotspot), GFAS, EFFIS. Para cada
+      um: resolução, latência, cobertura do Pará, custo, termos de uso e atribuição.
+   b. Modelos de risco: Fire Weather Index (McArthur), Canadian FDS, ITU-R BT.839,
+      e o que a literatura de ML faz para risco de incêndio na Amazônia (artigos
+      identificáveis). Contrastar com a frente A (PLANO §10) e dizer o que é reuso,
+      o que é adapted, o que é original.
+   c. Propagação / nowcast: FARSITE, modelos tipo Rothermel/scalar, previsão de
+      spread do EFFIS. Dizer o que é viável no escopo e com que dependência.
+   d. Datasets de entrada: FIRMS, MCD64A1, MCD14DL, MOD11A1, MOD13, CHIRPS, ERA5,
+      SAF/EDMI, ESA WorldCover, MapBiomas, Sentinel-2 / Landsat C2 (dNBR),
+      ALOS/SRTM, densidade de raios.
+   e. Sistemas de alerta já existentes no Brasil e na Amazônia (INPE, MMA,
+      estaduais, acadêmicos) — o que já é feito e em que escala.
+   f. LACUNA: o que nenhum sistema existente faz e que o NGEO faria — roteamento
+      institucional por Gerência Regional, citação do zoneamento do plano de
+      gestão, SHAP local auditável por UC, uso offline em campo. Se essa lacuna
+      não se sustentar, dizê-lo.
+   g. RISCOS: dependência de terceiro (fonte fora do ar, mudança de termos),
+      atribuição/licença, fonte única como ponto de falha.
+
+2. DECISÕES DE FONTE (DECISIONS.md): fonte primária de focos, fontes de fallback,
+   ordem de implementação, e o schema canônico definitivo (PLANO §5, §6) à luz do
+   que foi apurado. Registrar a política de dedup entre sensores com critério
+   explícito.
+
+3. PRIMEIRA COLETA REAL: obter a chave da API FIRMS (https://firms.modaps.eosdis.nasa.gov/
+   api/area — registro no site) e escrever scripts/probe_firms.py que faça UMA
+   chamada real para o recorte do Pará e despeje: o schema de resposta CRU (não a
+   documentação), o número de registros, o recorte de coordenadas, os campos de
+   data/hora, satellite, confidence, FRP, e o formato exato do campo de
+   coordinate. Salvar uma amostra em data/ (gitignored) e documentar em
+   docs/ESTADO_DA_ARTE.md o schema REAL observado.
+   Se não houver chave disponível, fazer a chamada via uma fonte sem chave
+   (ex.: área pública do FIRMS) ou via INPE, e registrar o bloqueio em ISSUES.md.
+
+4. REFINAR o plano: ajustar PLANO_ARQUITETURA §5/§6/§12 com o que for apurado,
+   sem quebrar as decisões já fechadas (D-001..D-011).
+
+Regras:
+- NÃO treinar modelo, NÃO implementar o backend, NÃO implementar a ingestão
+  completa. O entregável de código é o probe (um script que prova a coleta).
+- NÃO inventar referência, número, latência ou metrica. Tudo que não foi
+  verificado fica marcado como NÃO VERIFICADO. Se não achou, escreve que não achou.
+- Citar URL de toda fonte externa consultada, com data de acesso.
+- ruff check . e pytest -q OK (o probe tem teste com fixture gravada, sem rede).
+- atualizar ISSUES.md, RETOMADA.md e DECISIONS.md no mesmo commit; commit + push.
+```
+
+---
+
 ## T1 — Fundação local (PostGIS + Redis + schema + seed)
 
 ```text
@@ -105,7 +167,7 @@ RETOMADA.md; commit + push.
 
 ## T4 — Entrega multi-canal (F4)
 
-```text
+````text
 Contexto: repo H:\Meu Drive\DEV\sistema_alerta_incendio. Leia AGENTS.md, RETOMADA.md,
 ISSUES.md, DECISIONS.md e PLANO_ARQUITETURA.md.
 
@@ -137,7 +199,7 @@ Tarefa: implementar a FASE F4.
 
 Regras: ruff + pytest OK; segredos só via .env/settings; atualizar ISSUES e
 RETOMADA.md; commit + push.
-```
+````
 
 ---
 
