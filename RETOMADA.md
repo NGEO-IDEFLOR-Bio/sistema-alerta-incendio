@@ -1,7 +1,7 @@
 # RETOMADA — estado atual e próximos passos
 
 > Entrada para retomar. Leia: `AGENTS.md` → este arquivo → `ISSUES.md` → `TAREFAS.md` → `BUILD.md`.
-> Atualizado: 21/10/2026.
+> Atualizado: 21/10/2026 (T0 — estado da arte + 1ª coleta real).
 
 ## Estado atual
 
@@ -10,7 +10,20 @@
     `PLANO_ARQUITETURA.md`, `.gitignore`, `.gitattributes`, `.env.example` criados.
   - Repo git inicializado; `.env` e `secrets/` **fora** do versionamento.
   - Arquitetura anterior movida para `docs/arquivo/arquitetura_do_backend_do_sistema.md`.
-  - **Nenhum código escrito ainda.** Sem `backend/`, sem `frontend/`, sem docker-compose.
+  - **Nenhum backend escrito ainda.** Sem `backend/`, sem `frontend/`, sem docker-compose.
+- **F0b (T0) — ✅ concluída em 21/10/2026.** Estado da arte + 1ª coleta real.
+  - **`docs/ESTADO_DA_ARTE.md`** — 11 seções, ~70 fontes externas citadas com URL e data
+    de acesso (21/10/2026). Detecção NRT, modelos de risco, propagação, datasets,
+    sistemas já existentes no Brasil/Amazônia, lacuna real e riscos.
+  - **Coleta real do FIRMS** — `scripts/probe_firms.py`: **uma** chamada a
+    `/api/area/csv/<MAP_KEY>/VIIRS_NOAA20_NRT/<bbox do Pará>/1/2026-10-19` → **811 registros**,
+    14 colunas. Payload cru + relatório de schema em `data/probes/` (gitignored); recorte de
+    6 linhas versionado em `tests/fixtures/` como fixture do teste.
+  - `pyproject.toml` (ruff + pytest na raiz), `tests/test_probe_firms.py` (16 testes, **sem rede**).
+  - Schema **real** ≠ schema documentado: `acq_time` é HHMM **sem zero à esquerda**
+    (`353` = 03:53), `confidence` vem como `l`/`n`/`h`, `satellite` vem como `N20`, VIIRS não
+    tem `brightness`/`bright_t31` (tem `bright_ti4`/`bright_ti5`), lat/lon com 2–5 decimais
+    variáveis.
 - **Dados de referência recebidos (21/10/2026):**
   - `data/shapes_de_todas_as_unidades_com_gerencia.geojson` — **29 UCs com gerência DGMUC**
     (9 gerências), `id` 1..29, EPSG:4326. Digest e procedência em `data/README.md`.
@@ -21,12 +34,40 @@
 - **Decisões fechadas:** D-001 MapLibre · D-002 duas frentes em paralelo ·
   D-003 alerta termina na notificação, sem máquina de estados · D-004 todas as fontes ·
   D-005 DS compartilhado `ngeo-ds` · D-006 sistema ≠ pesquisa · D-007 roteamento por
-  gerência regional (**dependência resolvida**) · D-008 latência-alvo ≤1 h ·
-  D-009 zoneamento = contexto que aponta para o plano, **não** filtro ·
-  D-010 o sistema **nunca descarta foco em silêncio** — qualifica a confiança.
-- **Ativos já disponíveis no `.env`:** `DATABASE_URL` (PostGIS), `GEE_PROJECT_ID` +
-  `GEE_CREDENTIALS_JSON`, `TUNNEL_TOKEN` (Cloudflare), e uma chave do Sentinel Hub em
-  `secrets/`. `GEMINI_API_KEY` / `OPENROUTER_API_KEY` ficam para a frente A.
+  gerência regional (**dependência resolvida**) · D-008 latência-alvo ≤1 h
+  (**revisada por D-015**) · D-009 zoneamento = contexto que aponta para o plano, **não** filtro ·
+  D-010 o sistema **nunca descarta foco em silêncio** — qualifica a confiança ·
+  D-011 instrumento, não instrução ·
+  **D-012** fontes de focos (primária/fallback/ordem) · **D-013** política de dedup cross-sensor
+  · **D-014** schema canônico definitivo + CAP · **D-015** revisão da latência-alvo.
+- **Ativos já disponíveis no `.env`:** `GEE_PROJECT_ID` + `GEE_CREDENTIALS_JSON`,
+  `TUNNEL_TOKEN` (Cloudflare), uma chave do Sentinel Hub em `secrets/`, e a **MAP_KEY do
+  FIRMS** (obtida em 21/10/2026). `GEMINI_API_KEY` / `OPENROUTER_API_KEY` ficam para a frente A.
+  ⚠️ `DATABASE_URL` está **vazia** no `.env` (issue #34) — a `RETOMADA` anterior
+  afirmava que estava lá.
+
+## O que a T0 mudou no plano (leitura obrigátoria antes da F1)
+
+1. **Latência-alvo (D-015).** URT/RT do FIRMS são **só EUA/Canadá**; para o Pará o
+   piso do FIRMS NRT é **< 3 h**. O alvo de 1 h só vale para **recência via GOES**
+   (10 min). Comunicação: *recência ≤ 30 min* + *detecção NRT < 3 h* + *risco diário*.
+2. **Fontes (D-012).** Primária: FIRMS **VIIRS** (375 m). Recência: NOAA **GOES ABI L2 FDC**.
+   Fallback: **INPE Programa Queimadas / BDQueimadas** (aberto, **sem chave** — o nome
+   "MONITORQUEIMADAS" não existe). MapBiomas **Alerta** é **desmatamento**, não fogo.
+3. **Dedup (D-013).** Mesmo fogo = `|Δt| ≤ 6 h` **e** `d ≤ max(raio_pixel_m)`. O dedup
+   **agrupa** (`focos_grupos`), **não apaga** (D-010). A janela de 6 h ainda tem de ser
+   **calibrada** (issue #32).
+4. **Schema (D-014).** `focos` ganhou `produto`, `satelite_codigo`, `versao_produto`,
+   `scan_angle`, `track_angle`, `dia_noite`, `posicao_terreno_corrigida`, brilho
+   parametrizado por banda, `confianca` canônica + `confianca_crua`, `grupo_id`.
+   Novas tabelas: `focos_grupos`, `fontes`, `parametros_dedup`.
+5. **Padrão de mensagem:** **CAP (ITU-T X.1303 / OASIS v1.2)** — não "ITU-R BT.839",
+   que **não foi localizada** (T.839 da ITU-T é JPEG XR).
+6. **Lacuna do NGEO:** **se sustenta em 2 de 4** (roteamento por Gerência Regional +
+   citação do zoneamento). "SHAP local por UC" **já existe** (Cerrado, preprint
+   jun/2026; e Triunfo do Xingu) — a originalidade é **ignição + risco por UC do
+   IDEFLOR + SHAP no alerta**. "Offline" é decisão de produto, não lacuna de domínio.
+   Ver `docs/ESTADO_DA_ARTE.md` §6-f.
 
 ## Princípio que emerged das correções de 21/10/2026
 
@@ -48,6 +89,8 @@
 ## Bloqueio
 
 - **Nenhum bloqueio técnico.** #01 resolvido, #21 resolvido.
+- **#31 — MAP_KEY do FIRMS emitida para e-mail descartável**: funciona, mas tem de ser
+  reemitida sob e-mail institucional (e movida para `secrets/`). Não bloqueia a F1.
 - **Pendências institucionais (não bloqueiam F1/F2):**
   - ~~#22 — registry de gerências do `maps`~~ ✅ **resolvido** em 21/10/2026
     (`maps` commits `72b0eee` e `618feae`, push).
@@ -66,21 +109,21 @@
 
 ## Próximo passo (1 item)
 
-1. **T0 — Estado da arte, decisões de fonte de dados e primeira coleta real.**
-   Antes de escrever o backend: (a) levantar o que já existe — produtos de detecção
-   NRT, modelos de risco, métodos de propagação, datasets de entrada, sistemas de
-   alerta existentes no Brasil/Amazônia, e qual é a lacuna real do NGEO; (b) decidir
-   fonte primária de focos, fallbacks e o schema canônico definitivo; (c) **provar a
-   cadeia com uma coleta real** (`scripts/probe_firms.py`) e registrar o schema
-   observado, não o documentado.
-   Entregável: `docs/ESTADO_DA_ARTE.md` + decisões em `DECISIONS.md` + o probe.
-   Prompt pronto em `TAREFAS.md` → T0.
+1. **T1 — Fundação local (PostGIS + Redis + schema + seed).**
+   `docker-compose.yml`, `backend/` com pyproject/Alembic, o schema de
+   `PLANO_ARQUITETURA.md` §5 (agora com `focos_grupos`, `fontes` e `parametros_dedup`),
+   seeds das 9 gerências, das 29 UCs e das 252 zonas (verbatim, por sobreposição
+   espacial), e `GET /api/health`.
+   Prompt pronto em `TAREFAS.md` → T1.
+   ⚠️ Antes de começar: preencher `DATABASE_URL` no `.env` (issue #34).
 
-## Próximos depois da T0
+## Próximos depois da T1
 
-T1 (foundation: PostGIS + Redis + schema + seed) → T2 (ingestão multi-fonte + dedup)
-→ T3 (motor de regras) → T4 (entrega) → T5 (frontend).
+T2 (ingestão multi-fonte + dedup cross-sensor) → T3 (motor de regras) → T4 (entrega)
+→ T5 (frontend).
 **Frente A (T6/T7) e Frente B (F7) entram em paralelo** a partir de F6.
+Na T2: uma **coleta real por fonte** (VIIRS já feita — issue #33 pede MODIS, GOES e INPE),
+calibração da janela de dedup (#32) e reemissão da MAP_KEY (#31).
 
 
 ## Fora de escopo (agora)

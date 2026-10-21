@@ -1,6 +1,7 @@
 # BUILD — como rodar, verificar e armadilhas do ambiente
 
-> Estado: **F1 ainda não implementada.** Os comandos abaixo são o alvo da T1.
+> Estado: **F1 ainda não implementada.** O bloco "Verificação" já vale
+> **a partir da raiz do repo** desde a T0 (probe + teste).
 > Conforme as fases avançam, ATUALIZE este arquivo no mesmo commit.
 
 ## Ambiente
@@ -39,7 +40,13 @@ python -m scripts.seed_gerencias
 ## Verificação (OBRIGATÓRIA antes de commit)
 
 ```powershell
-# backend
+# raiz do repo (vale desde a T0: scripts/probe_firms.py + tests/)
+python -m pytest -q
+ruff check .
+ruff format --check .
+
+# backend (a partir da T1)
+cd backend
 python -m pytest -q
 ruff check .
 ruff format --check .
@@ -49,6 +56,19 @@ cd frontend
 npm run lint
 npm run build
 ```
+
+**Ferramentas:** Python ≥ 3.12, `pytest` ≥ 8, `ruff` ≥ 0.6 (ambos em `pip install -e ".[dev]"`
+ou `pip install pytest ruff`). Config em `pyproject.toml` (linha 100, `target-version = py312`).
+
+## Probe do FIRMS (T0)
+
+```powershell
+$env:FIRMS_API_KEY = "<MAP_KEY>"          # chave gratuita: https://firms.modaps.eosdis.nasa.gov/api/map_key/
+python scripts/probe_firms.py --source VIIRS_NOAA20_NRT --date 2026-10-19
+```
+
+Grava o payload cru e o relatório de schema em `data/probes/` (**gitignored**).
+O teste (`tests/test_probe_firms.py`) roda **sem rede**, com a fixture gravada.
 
 ## Rodar
 

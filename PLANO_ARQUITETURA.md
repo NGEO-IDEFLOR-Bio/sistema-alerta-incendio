@@ -74,37 +74,72 @@ Não existe estado de atendimento, nem atribuição, nem SLA. O que mede o produ
 
 ## 5. Schema canônico (PostGIS)
 
+> **Revisado em 21/10/2026 (T0)**, à luz da coleta real do FIRMS e de
+> `docs/ESTADO_DA_ARTE.md` §7. As mudanças são: campos de proveniência do sensor
+> (`produto`, `satelite_codigo`, `versao_produto`, `scan_angle`, `track_angle`,
+> `dia_noite`, `posicao_terreno_corrigida`), **canal de brilho parametrizado por banda**
+> (o VIIRS entrega `bright_ti4`/`bright_ti5`, o MODIS `brightness`/`bright_t31`),
+> `confianca` canônica (`low|nominal|high`, o FIRMS entrega `l|n|h`), a tabela de
+> grupos de dedup (§5.10), a tabela de fontes (§5.11) e o desdobramento de
+> `n_focos`/`n_leituras` (§5.2). Decisão: `DECISIONS.md` D-012/D-013/D-014.
+
 ```sql
--- 5.1 Focos: canônico, multi-fonte. Uma linha por leitura de sensor.
+-- 5.1 Focos: canônico, multi-fonte. Uma linha por LEITURA DE SENSOR (não por fogo).
+--     O mesmo fogo visto por 2 sensores = 2 linhas em `focos`, ligadas por `grupo_id`
+--     (D-013). Nada é apagado: dedup agrupa, não descarta (D-010).
 focos (
   id              bigserial primary key,
-  fonte           text not null,          -- 'FIRMS_MODIS' | 'FIRMS_VIIRS' | 'FIRMS_GOES'
-                                        -- | 'INPE_MONITORQUEIMADAS' | 'GOES16_ABI'
-  satelite        text,
-  sensor          text,
-  swath           text,
-  acquisition_time timestamptz not null,
+  fonte           text not null,          -- 'FIRMS_VIIRS' | 'FIRMS_MODIS'
+                                        -- | 'NOAA_ABI_FDC' | 'INPE_QUEIMADAS'
+  produto         text not null,          -- 'VIIRS_NOAA20_NRT' | 'MODIS_NRT'
+                                        -- | 'ABI-L2-FDC' | 'FOCOS_QUEBIMADAS'
+  sensor          text,                   -- 'VIIRS' | 'MODIS' | 'ABI'
+  satelite        text,                   -- canônico: 'NOAA-20' | 'TERRA' | 'GOES-19'
+  satelite_codigo text,                   -- cru, como veio da fonte: 'N20' | 'AQUA'
+  versao_produto  text,                   -- cru: '2.0NRT' | '3.0'
+  acquisition_time timestamptz not null,  -- UTC; acq_date + acq_time (HHMM sem
+                                        -- zero à esquerda: '353' = 03:53)
   lat             double precision not null,
   lon             double precision not null,
   geom            geometry(Point, 4326) not null,
+  -- Canal de brilho: o sensor define as bandas. VIIRS -> TI4/TI5; MODIS -> MIR/T31.
   bright_ti_k     numeric,                -- temperatura de brilho (K)
+  bright_ti_banda text,                   -- 'TI4' | 'TI5' | 'MIR' | 'T31'
+  bright_ti2_k    numeric,                -- canal secundário, quando houver
+  bright_ti2_banda text,
   frp_mw          numeric,                -- fire radiative power (MW)
-  confianca       text,                   -- low | nominal | high
-  raio_pixel_m    numeric,                -- 375 (VIIRS) | 750 (GOES) | 1000 (MODIS)
+  confianca       text,                   -- canônico: low | nominal | high
+                                        -- (a fonte entrega l | n | h)
+  confianca_crua  text,                   -- cru, como veio: 'l' | 'n' | 'h'
+  dia_noite       text,                   -- 'D' | 'N'
+  scan_angle      numeric,                -- ângulo de varredura do sensor
+  track_angle     numeric,
+  raio_pixel_m    numeric not null,       -- 375 (VIIRS) | 1000 (MODIS) | 2000 (GOES, nadir)
+  posicao_terreno_corrigida boolean not null default true,
+                                        -- false para GOES ABI: a coordenada L2 não é
+                                        -- corrigida para o relevo (offset em terreno alto)
+  -- Dedup cross-sensor: grupo do mesmo fogo (D-013)
+  grupo_id        bigint references focos_grupos(id),
   raw             jsonb,                  -- payload original da fonte
   criado_em       timestamptz default now()
 );
 create index on focos using gist (geom);
 create index on focos (acquisition_time desc);
+create index on focos (grupo_id);
+-- Idempotência de ingestão: mesma leitura não entra duas vezes (D-013, nível 1)
+create unique index on focos
+  (produto, satelite_codigo, acquisition_time, scan_angle, track_angle, lat, lon);
 
--- 5.2 Evento: agrupamento espacial-temporal de focos = "ocorrência de fogo".
+-- 5.2 Evento: agrupamento espacial-temporal de FOCOS (grupos) = "ocorrência de fogo".
 --     É agregação, não máquina de estados.
 eventos_fogo (
   id            bigserial primary key,
   geom_centro   geometry(Point, 4326) not null,
   bbox          geometry(Polygon, 4326) not null,
-  n_focos       int not null,
-  fontes        text[] not null,
+  n_focos       int not null,            -- nº de FOGOS distintos (= nº de grupos)
+  n_leituras    int not null,            -- nº de leituras de sensor que os viram
+  fontes        text[] not null,         -- produtos distintos que viram o evento
+  sensores      text[] not null,         -- sensores distintos (concordância)
   primeira_hora timestamptz not null,
   ultima_hora   timestamptz not null,
   frp_max       numeric,
@@ -114,6 +149,7 @@ eventos_fogo (
   distancia_uc_m numeric,
   derivacao     text not null             -- regra de cluster usada (transparência)
 );
+
 
 -- 5.3 Alerta: registro imutável do que foi notificado.
 --     Sempre emitido quando o evento toca uma UC (D-010). A incerteza é declarada,
@@ -249,24 +285,102 @@ e o campo `zona_texto` fica nulo com a limitação explícita. Issue #24.
 > um pixel**, não uma coordenada de precisão. A interface deve mostrar o círculo de
 > incerteza, nunca um pino com falsa exatidão.
 
+### 5.10 Grupos de dedup cross-sensor (D-013)
+
+> **Nova em 21/10/2026 (T0).** Um **grupo** = UM fogo visto por 1 ou mais sensores.
+> As leituras continuam **todas** em `focos`; o grupo é a **ligação**. Nada é apagado
+> (D-010). `focos.grupo_id` → `focos_grupos.id`.
+
+```sql
+focos_grupos (
+  id                 bigserial primary key,
+  geom               geometry(Point, 4326) not null,   -- coordenada da leitura representante
+  leitura_representante_id bigint references focos(id), -- a de maior confiança (h>n>l);
+                                                        -- empate -> maior FRP
+  n_leituras         int not null,
+  sensores           text[] not null,                  -- sensores que viram o fogo
+  primeira_hora      timestamptz not null,
+  ultima_hora        timestamptz not null,
+  frp_max            numeric,
+  frp_acumulado      numeric,
+  confianca          text not null,                   -- da leitura representante
+  derivacao          text not null                    -- regra de dedup (transparência)
+);
+create index on focos_grupos using gist (geom);
+```
+
+**Critério de dedup (explícito, D-013):** duas leituras são o **mesmo fogo** se
+`|Δt| ≤ 6 h` **e** `d ≤ max(raio_pixel_m₁, raio_pixel_m₂)`. O limiar temporal é
+**parametro** (`parametros_dedup`) e tem de ser **calibrado** contra dados reais na F2.
+
+### 5.11 Fontes: proveniência, licença e atribuição (D-012, issue #07)
+
+> **Nova em 21/10/2026 (T0).** Fonte da verdade do *duty* de atribuição e do *pin* de
+> versão de produto (risco RK2 do `docs/ESTADO_DA_ARTE.md`).
+
+```sql
+fontes (
+  id                  serial primary key,
+  fonte               text not null unique,   -- 'FIRMS_VIIRS' | 'NOAA_ABI_FDC' | ...
+  nome                text not null,
+  produto             text,
+  resolucao_m         numeric,
+  latencia_horas      numeric,                -- latência-alvo declarada
+  intervalo_minutos   int,                    -- cadência de coleta (GOES: 10)
+  url                 text,
+  termos_url          text,
+  atribuicao_requerida text,                  -- texto exato a exibir
+  licenca             text,
+  chave_requerida     boolean not null default false,
+  versao_produto_atual text,                  -- pin de versão
+  ativo               boolean not null default true,
+  observacao          text
+);
+```
+
+### 5.12 Parâmetros de dedup e de cluster (D-013)
+
+```sql
+parametros_dedup (
+  id                 serial primary key,
+  chave              text primary key,       -- 'dedup_janela_horas' | 'dedup_raio_m'
+                                            -- | 'cluster_raio_m' | 'cluster_janela_h'
+  valor              numeric not null,
+  justificativa      text,
+  atualizado_em      timestamptz default now()
+);
+```
+
 ## 6. Camada de ingestão multi-fonte
+
+> **Revisado em 21/10/2026 (T0)** — `DECISIONS.md` D-012. Ordem de implementação e
+> nomes de fonte corrigidos à luz de `docs/ESTADO_DA_ARTE.md` §1.
 
 ```
 adapters/
-├── firms.py          MODIS / VIIRS / GOES via API FIRMS
-├── inpe.py           MONITORQUEIMADAS
-├── goes16.py         AWS Open Data (noaa-goes16) + detecção própria OU produto FIRMS
+├── firms.py          FIRMS VIIRS (NOAA-20/21, S-NPP) e MODIS — API /api/area
+├── inpe.py           Programa Queimadas / BDQueimadas (CSV aberto, sem chave)
+├── goes_abi.py       NOAA GOES-R ABI L2 FDC (ABI-L2-FDC, bucket público noaa-goes16)
+├── mapbiomas.py      FRENTE A — área queimada anual/mensal (NÃO é detecção NRT)
 └── base.py           contrato: fetch() -> list[FocoCanonico]
 ```
 
 Regras do adapter:
 1. **Um schema canônico.** Nenhum consumidor sabe qual fonte originou o foco além de
-   `fonte`/`satelite`/`sensor`.
-2. **Dedup cross-sensor.** O mesmo incêndio aparece no MODIS e no VIIRS. Deduplicação por
-   **janela temporal + proximidade espacial**, não por igualdade de coordenada.
-3. **Proveniência sempre.** `raw` guarda o payload original; `fonte` identifica a origem.
+   `fonte`/`produto`/`satelite`/`sensor` — e o `raw` preserva o payload original.
+2. **Dedup cross-sensor** — critério explícito em D-013: `|Δt| ≤ 6 h` **e**
+   `d ≤ max(raio_pixel_m)`. O dedup **agrupa** (tabela `focos_grupos`); **não apaga**
+   (D-010).
+3. **Proveniência sempre.** `raw` guarda o payload original; `fonte`/`produto`
+   identificam a origem; `versao_produto` fixa a versão do produto.
 4. **Falha de uma fonte não derruba as outras.** O coletor isola erros por adapter.
-5. **Atribuição/licença por fonte** registrada → issue #07.
+5. **Atribuição/licença por fonte** registrada em `fontes` → issue #07.
+6. **Formato da fonte é lido, não presumido.** O schema **difere por sensor** (VIIRS
+   traz `bright_ti4`/`bright_ti5`; MODIS traz `brightness`/`bright_t31`; a confiança
+   vem como `l`/`n`/`h`; `acq_time` é HHMM **sem zero à esquerda**). Adapter que
+   implemente a documentação em vez do payload quebra em produção — ver
+   `docs/ESTADO_DA_ARTE.md` §7.2.
+
 
 ## 7. Motor de regras → alertas
 
@@ -425,6 +539,32 @@ regional. Não é vitrine, não é tutorial, não é página institucional.
 - **Repo:** `ml-fire-alert` (recriado). Entrega ao sistema como **artefato versionado** +
   `model_card.json` (D-006).
 
+> **Revisado em 21/10/2026 (T0)** — `docs/ESTADO_DA_ARTE.md` §2.5, §2.7 e §4.
+>
+> - **Rótulo:** usar **área queimada** (MapBiomas Fogo 30 m 1985–2025 / MCD64A1 v6.1 /
+>   dNBR), **nunca o ponto de foco** — há viés de detecção documentado
+>   (Giglio et al. 2016; Berman et al. 2023). O **atraso** do MCD64A1 não é
+>   documentado oficialmente: observado em GEE, o `MODIS/061/MCD64A1` terminava em
+>   **2026-08-01** em 21/10/2026 (NÃO VERIFICADO como número oficial).
+> - **Features — correções:** `MCD14DL` **não é LST** (é fogo ativo MODIS NRT);
+>   LST diária = **MOD11A1/MYD11A1**. Série de NDVI/EVI: **MOD13A2** (1 km, 16 d) ou
+>   **MOD13Q1** (250 m, 16 d). Chuva: **CHIRPS v2.0** (0,05°, diário) ou **ERA5-Land**
+>   (0,1°, horário). Cobertura: **ESA WorldCover** (10 m, 2020/2021) + **MapBiomas**
+>   (30 m). Elevação: **Copernicus DEM GLO-30** (30 m) — **atenção**: o view service
+>   GLO-30 passou a exigir registro em **28/07/2026**; alternativa GLO-90/NASADEM.
+> - **"SAF/EDMI" — sigla NÃO VERIFICADA.** únicos reais de seca confirmados para a
+>   Amazônia: **SPI, SPEI, scPDSI, MCWD, RAI** (JRC) e, no Brasil, **ANA "Monitor de
+>   Secas"** e **CEMADEN**. Até que a fonte esteja confirmada, usá-los.
+> - **Densidade de raios:** **WWLLN Monthly Thunder Hour Data** (NASA GHRC DAAC, 0,05°,
+>   mensal, DOI 10.5067/WWLLN/DATA101) — o dado **bruto** da WWLLN é proprietário
+>   (USD 600/ano). Alternativa geostacionária: **NASA GLM**.
+> - **Validação:** holdout **por UC** (não por AOI equivalente), além de block CV.
+> - **Originalidade:** o "SHAP local por UC" **já existe** no Cerrado (arXiv:2606.04170,
+>   com hold-out e SHAP por AOI) e em **uma** UC amazônica (Triunfo do Xingu,
+>   doi:10.1016/j.jsames.2025.105366) — mas para **susceptibilidade**, não para
+>   **ignição**. A originalidade do NGEO é **ignição com horizonte de dias +
+>   risco por UC do IDEFLOR + SHAP dentro do alerta**, não "SHAP por UC" em si.
+
 ## 11. Frente B — Propagação (nowcast)
 
 Cadeia de dependências:
@@ -434,20 +574,44 @@ focos ──▶ cluster ──▶ perímetro estimado ──▶ modelo de propag
 ```
 
 - **Perímetro:** (a) acumulo de focos em janela (estimativa rápida, NRT) e/ou
-  (b) dNBR sob demanda (Sentinel-2/Landsat, 16–30 dias de atraso — serve de **validação**,
-  não de nowcast).
+  (b) dNBR sob demanda (Sentinel-2/Landsat — atraso **NÃO VERIFICADO**; serve de
+  **validação**, não de nowcast).
 - **Propagação:** modelo tipo Rothermel/simplificado, dirigido por **vento** (ERA5/GOES) e
-  classe de combustível. Referência de abordagem: EFFIS (produto europeu equivalente).
+  classe de combustível. Referência de abordagem: EFFIS (produto europeu equivalente —
+  **não cobre o Brasil** e não entrega forecast de spread por incêndio: NÃO VERIFICADO).
 - **Saída:** polígono de alcance por horizonte → "vai atingir o limite da UC em ~6 h".
 - **Alerta `PROPAGACAO`:** a mais acionável de todas — é ela que vira "vá para lá agora".
 
+> **Revisado em 21/10/2026 (T0)** — `docs/ESTADO_DA_ARTE.md` §3.
+>
+> - **Dependência dura: mapa de combustível.** LANDFIRE (30 m) cobre **só os EUA** e
+>   o EFFIS Fuel Map cobre **a Europa**. Para a Amazônia **não foi localizada fuel map
+>   padronizada** de resolução operacional — o próprio FISC-Cerrado (UFMG+INPE,
+>   doi:10.1038/s41598-023-30560-9) precisou **construir** carga de combustível e umidade de
+>   vegetação por sensoriamento remoto.
+> - **FARSITE não é mais distribuído** (integrado ao FlamMap 6, Windows) e exige `.LCP`
+>   + `.FMS` — a própria NOAA chama a criação do `.FMS` de "by far the most
+>   subjective exercise". Não é caminho prático.
+> - **Em Python** existem `pyretechnics` (EPL-2.0, ELMFIRE) e ports não oficiais
+>   (`rothermel.py`/`farsite.py`); em R, `Rothermel` (GPL-2), `firebehavioR`, `Cell2Fire`.
+> - **Plano em dois degraus:** (1) **agora** — perímetro por acúmulo de focos + vetor de
+>   deslocamento por vento, sem simulação física (sem insumo novo);
+>   (2) **depois** — Rothermel em pontos com fuel model **derivado** do uso do solo
+>   (MapBiomas/WorldCover), com confiança degradada e declarada.
+> - **Referência brasileira a copiar de estrutura:** FISC-Cerrado — previsão 3×/dia,
+>   500 m no Cerrado e **20 m em 9 UCs**, já em uso operacional.
+
 ## 12. Fases
+
+> **Revisado em 21/10/2026 (T0).** Acrescenta a fase **F0b** (estado da arte + coleta
+> real, já feita) e corrige as dependências de F2 à luz de `DECISIONS.md` D-012/D-015.
 
 | Fase | Entrega | Depende de |
 | :--- | :--- | :--- |
 | **F0** | Bootstrap: docs, `.gitignore`, `git init`, este plano | — |
-| **F1** | Fundação: docker-compose (PostGIS+Redis), schema, seed de geometrias de referência, `/api/health` | F0, **issue #01** |
-| **F2** | Ingestão multi-fonte → `focos` + dedup → `eventos_fogo` | F1, FIRMS key |
+| **F0b** | ✅ **Estado da arte + 1ª coleta real** (`docs/ESTADO_DA_ARTE.md`, `scripts/probe_firms.py`, decisões D-012..D-015) | F0 |
+| **F1** | Fundação: docker-compose (PostGIS+Redis), schema, seed de geometrias de referência, `/api/health` | F0b, **issue #01** |
+| **F2** | Ingestão multi-fonte → `focos` → `focos_grupos` (dedup) → `eventos_fogo` | F1, FIRMS key **reemitida sob e-mail institucional** (#13) |
 | **F3** | Motor de regras + `alertas` + `config_alerta` + `/api/alertas` | F2, **issue #01** |
 | **F4** | Entrega multi-canal (email → telegram/whatsapp/webhook) + log | F3 |
 | **F5** | Frontend MapLibre: mapa, heatmap, alertas, painel de UC, scrubber temporal | F2/F3 |
@@ -459,6 +623,11 @@ focos ──▶ cluster ──▶ perímetro estimado ──▶ modelo de propag
 **MVP = F0–F5.** O portal público / scrollytelling **não está no plano**: a decisão é
 ferramenta funcional, não página institucional (D-011). Se um dia precisar existir, sai
 como artefato da frente A, fora do caminho crítico.
+
+**Ordem dos adapters na F2** (D-012): `firms.py` (VIIRS — já provado por coleta real) →
+`inpe.py` (Programa Queimadas) → `goes_abi.py` (recência de 10 min) → `firms.py` (MODIS).
+O **GOES-16** do briefing é **GOES-19** desde 07/04/2025 (D-015): o sensor vem do
+payload, não da suposição.
 
 
 ## 13. Identidade visual — `ngeo-ds` (D-005)
@@ -484,12 +653,16 @@ como artefato da frente A, fora do caminho crítico.
 | R2b | Sistema decidir o que é permitido | Não decidir: **informar** a zona verbatim e a coordenada, sem interpretação e sem instrução (D-009, D-011) |
 | R2c | Produto virar landing page / babá | Princípio de interface "instrumento, sem narrativa" (§9, D-011). Sem texto explicativo, sem tutorial, sem CTA |
 
-| R3 | Promessa de tempo real não se sustenta | comunicar "detecção NRT ≤1 h" + "risco diário"; nunca "previsão em tempo real" |
-| R4 | Chave/licença de fonte de focos | registrar termos por fonte → issue #07 |
+| R3 | Promessa de tempo real não se sustenta | comunicar "**recência ≤ 30 min (GOES)**" + "**detecção NRT < 3 h (FIRMS VIIRS)**" + "risco diário"; nunca "previsão em tempo real" (D-015) |
+| R4 | Chave/licença de fonte de focos | registrar termos por fonte em `fontes` (§5.11) → issue #07 |
+| R4b | **Mudança de termos já aconteceu** (Copernicus DEM 30 m exigiu registro em 28/07/2026; GOES-16 → GOES-19 em 07/04/2025) | *pin* de versão por produto (`versao_produto`, `fontes.versao_produto_atual`) + data de validade no `model_card` (D-006). `docs/ESTADO_DA_ARTE.md` §8-RK2 |
+| R4c | **Fonte única como ponto de falha** — INPE e EFFIS também usam FIRMS no fundo | terceiro caminho sem FIRMS no fundo: **NOAA ABI L2 FDC** (bucket público, 10 min) + sensores próprios do INPE. Dependência real registrada em D-012 |
 | R5 | Volume de tiles / custo de raster | titiler+COG com pyramid; cache; só janelas úteis |
 | R6 | Uso offline em campo sem sinal | service worker + Pacote da UC |
 | R7 | Deploy/credencial em ambiente institucional | `.env` por ambiente; nada sensível no git (D-003, D-006) |
 | R8 | Zoneamento cobre só 16/29 UCs | alerta segue emitido **sem** contexto de zona, com limitação explícita (#24) |
 | R9 | Confundidor "fogo de manejo" nos rótulos | **Limitação declarada**, não resolvida: a zona não entra como feature e não é curada. Declarar no model card e no paper (§10) |
+| R10 | **Schema da fonte muda** (colunas por sensor, `l`/`n`/`h`, HHMM sem padding) | ler o payload, não a documentação; teste de fixture por sensor; `raw` preservado (§6 regra 6, D-014) |
+| R11 | **Mapa de combustãvel inexistente na Amazônia** → frente B sem lastro físico | frente B em dois degraus: (1) perímetro + deslocamento por vento; (2) Rothermel com fuel model **derivado** do uso do solo, com confiança degradada. `docs/ESTADO_DA_ARTE.md` §3.6 |
 
 

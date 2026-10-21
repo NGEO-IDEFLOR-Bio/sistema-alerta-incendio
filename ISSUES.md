@@ -16,7 +16,7 @@
 | **#02** | Bootstrap do repo (docs, `.gitignore`, `git init`) | ✅ feito | Fase F0 — 21/10/2026 |
 | **#03** | `docker-compose.yml` (PostGIS + Redis) + `scripts/` de seed | ⏳ pendente | F1 |
 | **#04** | Schema das tabelas canônicas | 🏗️ especificado | `PLANO_ARQUITETURA.md` §5 — implementar em F1 |
-| **#05** | Registro de chaves/licença por fonte de focos | ⏳ pendente | issue #07 |
+| **#05** | Registro de chaves/licença por fonte de focos | 🟡 **parcial** | T0 (21/10/2026): tabela `fontes` especificada no PLANO §5.11 (resolução, latência, URL, termos, atribuição, licença, pin de versão). Falta popular e exibir a atribuição no painel/relatório — issue #07 |
 
 ## Qualidade de dados de referência (NOVO)
 
@@ -51,8 +51,13 @@
 
 | # | Issue | Status | Nota |
 | :--- | :--- | :--- | :--- |
-| **#07** | Registrar termos de uso, atribuição e redistribuição por fonte (FIRMS, INPE, GOES/AWS, Sentinel Hub) | ⏳ pendente | Duty de atribuição no painel e no relatório |
-| **#13** | Conceder/registrar chaves: FIRMS API, INPE, Sentinel Hub, Telegram bot | ⏳ pendente | `.env.example` já tem as chaves |
+| **#07** | Registrar termos de uso, atribuição e redistribuição por fonte (FIRMS, INPE, GOES/AWS, Sentinel Hub) | 🟡 **parcial** | T0 (21/10/2026) coletou o texto de atribuição verificado de FIRMS/LANCE, ESA WorldCover (CC BY 4.0), Copernicus DEM e NOAA GOES-R (em `docs/ESTADO_DA_ARTE.md` §4 e §10). **Falta**: texto legal do INPE (Guia de Estilo) e licença do MapBiomas — ambos **NÃO VERIFICADOS**; e implementar o *duty* no painel/relatório |
+| **#13** | Conceder/registrar chaves: FIRMS API, INPE, Sentinel Hub, Telegram bot | 🟡 **parcial** | **FIRMS: OK** — MAP_KEY obtida e testada em 21/10/2026 (ver #31 para a reemissão institucional). **INPE: não precisa de chave** (dados abertos, sem autenticação) — remover `INPE_API_KEY` do `.env.example`. **Sentinel Hub** e **Telegram**: pendentes |
+| **#31** | MAP_KEY do FIRMS emitida para **e-mail descartável** | 🟡 pendente | A chave foi obtida em 21/10/2026 e funciona (coleta real: 811 registros). Mas foi emitida para um e-mail temporário — reemitir sob **e-mail institucional**, guardar em `secrets/` e atualizar o `MAP_KEY` no `.env`. Enquanto isso: risco de perda de acesso ao portal de gerenciamento da chave |
+| **#32** | **Calibrar a janela temporal do dedup** (6 h, D-013) | ⏳ pendente | O valor de 6 h é uma **inferência** (espaçamento de passagem de órbita polar), **não verificada**. A F2 tem de calibrar contra dados reais (mesmo fogo visto por VIIRS/MODIS/GOES) e registrar o valor escolhido em `DECISIONS.md` (D-013) |
+| **#33** | Schema real de **MODIS, GOES e INPE** ainda não coletado | ⏳ pendente | Só o **VIIRS** foi coletado de verdade (21/10/2026). O schema do MODIS difere (`brightness`/`bright_t31`) e o GOES não é SOURCE do `/api/area` do FIRMS (`GOES_NRT` só em `/api/data_availability`). F2 precisa de uma chamada real por fonte antes de fixar o mapeamento |
+| **#34** | `DATABASE_URL` **vazio** no `.env` | ⏳ pendente | A `RETOMADA.md` afirmava que o `DATABASE_URL` (PostGIS) já estava no `.env`; em 21/10/2026 a variável existe mas está **vazia**. Preencher antes da F1 |
+| **#35** | INPE: o nome "MONITORQUEIMADAS" não existe | 🟡 resolvido | O INPE mantém o **Programa Queimadas / BDQueimadas** (focos a cada 10 min, CSV/KML, WFS/WMS, **sem autenticação**). Nenhum registro oficial de "MONITORQUEIMADAS" em 21/10/2026. `DECISIONS.md` D-012 e PLANO §6 corrigidos |
 | **#14** | Geometria de referência: fonte única | 🟡 parcial | `data/` deste repo (gitignored) + `visualizador/data/`. Consolidar em `ngeo-assets` (issue #11 junto) |
 | **#15** | ~~Zonas de amortecimento das UCs~~ | 🟡 parcial | ZA existe para poucas UCs (Trombetas, REVIS, Paru, Faro) — ver #25 |
 
@@ -64,7 +69,7 @@
 | **#16** | Basemap auto-hospedado (uso institucional + offline) | ⏳ pendente | MVP usa OSM/Esri |
 | **#17** | "Pacote da UC" offline (GeoJSON + raster + PDF) | ⏳ pendente | F5/F8 — campo sem sinal |
 | **#18** | Relatório PDF operacional por UC | ⏳ pendente | Entregável de campo; já previsto em RF10 |
-| **#19** | Posicionamento público: "detecção NRT ≤1 h" + "risco diário" | ⏳ pendente | Nunca "previsão em tempo real" (R3) |
+| **#19** | Posicionamento público: "detecção NRT ≤1 h" + "risco diário" | 🟡 **parcial** | **Corrigido em 21/10/2026 (D-015):** o alvo de 1 h só é viável para o Pará via **GOES (recência ≤ 30 min)**; a **detecção de alta resolução (FIRMS VIIRS) é < 3 h** (URT/RT são só EUA/Canadá). Nunca "previsão em tempo real" (R3) |
 | **#20** | Repo `ml-fire-alert` (frente A, pesquisa) | ⏳ pendente | Recriar quando a frente A entrar (F6) |
 
 ## Descartado
