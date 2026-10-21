@@ -39,7 +39,8 @@
   D-010 o sistema **nunca descarta foco em silêncio** — qualifica a confiança ·
   D-011 instrumento, não instrução ·
   **D-012** fontes de focos (primária/fallback/ordem) · **D-013** política de dedup cross-sensor
-  · **D-014** schema canônico definitivo + CAP · **D-015** revisão da latência-alvo.
+  · **D-014** schema canônico definitivo + CAP · **D-015** revisão da latência-alvo ·
+  **D-016** fronteira de produto (o que o NGEO é e o que não é).
 - **Ativos já disponíveis no `.env`:** `GEE_PROJECT_ID` + `GEE_CREDENTIALS_JSON`,
   `TUNNEL_TOKEN` (Cloudflare), uma chave do Sentinel Hub em `secrets/`, e a **MAP_KEY do
   FIRMS** (obtida em 21/10/2026). `GEMINI_API_KEY` / `OPENROUTER_API_KEY` ficam para a frente A.
@@ -68,6 +69,14 @@
    jun/2026; e Triunfo do Xingu) — a originalidade é **ignição + risco por UC do
    IDEFLOR + SHAP no alerta**. "Offline" é decisão de produto, não lacuna de domínio.
    Ver `docs/ESTADO_DA_ARTE.md` §6-f.
+7. **Fronteira de produto gravada (D-016, 21/10/2026).** Reapurado com **ALARMES**
+   (LASA/UFRJ), **SIFAU** e **Savana** — que **não abafam** a lacuna, mas ocupam o
+   espaço "estatística por ROI/UC" e "alerta por proximidade". O NGEO **não** fará:
+   estatística histórica por UC · reprocessamento de área queimada · índice de
+   perigo · app de proximidade · ferramenta de campo citizen-science. Objeto primário do
+   dashboard: **fila de alertas por gerência**. A frente A passa a ser
+   **risco de ignição** (não susceptibilidade), com correção de
+   detectabilidade no rótulo e **SHAP local dentro do alerta**.
 
 ## Princípio que emerged das correções de 21/10/2026
 

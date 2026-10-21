@@ -390,7 +390,7 @@ Configuração por gerência (`config_alerta`), regras avaliadas a cada ciclo:
 | :--- | :--- | :--- |
 | `FOCO_EM_UC` | foco dentro da UC ou da ZA | por nº de focos na janela |
 | `FOCO_PROXIMO_UC` | foco a < R metros do limite | por distância e nº de focos |
-| `RISCO_ALTO` | score da frente A acima do limiar da gerência | por faixa de score |
+| `RISCO_ALTO` | score da frente A acima do limiar da gerência **E** há novidade (mudança de faixa desde o último alerta da UC) | por faixa de score |
 | `PROPAGACAO` | frente B estima alcance da UC | por tempo até o limite |
 
 **Qualificação da confiança (obrigatória — e é o que substitui a supressão, D-010):**
@@ -408,6 +408,11 @@ alerta**. O que muda é a severidade e a confiança declaradas:
 **Agregação ≠ supressão.** N focos do mesmo incêndio viram **um evento, um alerta**
 (anti-spam, não descarte). Filtros de geometria e qualidade (nuvem, chuva recente,
 fogo possivelmente de manejo) **qualificam a confiança**; nunca descartam.
+
+> **O alerta de risco diário não pode virar rotina.** `RISCO_ALTO` dispara quando o
+> score cruza o limiar **e** há novidade. Sem a condição de novidade, as 29 UCs
+> recebem um alerta por dia e a gerência deixa de olhar — exatamente a perda de
+> confiança que D-010 existe para evitar. (D-016)
 
 **A zona do plano de gestão entra como fato, nunca como interpretação:**
 
@@ -465,6 +470,10 @@ Focos ...... 7 em 2h10   Fontes: FIRMS_VIIRS, GOES16
 
 **Princípio de interface: instrumento, não narrativa (D-011).**
 
+**Objeto primário: a fila de alertas por Gerência Regional.** O heatmap de focos e o mapa
+são **contexto** — o lugar onde o fato acontece. A fila ç onde o trabalho acontece, e ç
+por isso que a escala de severidade, a confiança e o zoneamento estão lá. (D-016)
+
 O dashboard é para quem já sabe o que é uma UC, um foco de calor e uma gerência
 regional. Não é vitrine, não é tutorial, não é página institucional.
 
@@ -516,10 +525,32 @@ regional. Não é vitrine, não é tutorial, não é página institucional.
 
 ## 10. Frente A — Risco de ignição (ML + SHAP)
 
-- **Alvo:** `P(ocorrência de fogo na UC nos próximos N dias)`, N ∈ {7, 30}.
+> **Revisado em 21/10/2026 (T0)** — `DECISIONS.md` D-016 e `docs/ESTADO_DA_ARTE.md`
+> §2.5–2.7. Alvo redefinido, desenho do rótulo explicitado, SHAP dentro do alerta,
+> e alarme de rotina proibido.
+
+- **Alvo:** `P(ignição na UC nos próximos N dias)`, N ∈ {7, 30}.
+  ⚠️ **é risco de IGNiÇÃO, não susceptibilidade.** Susceptibilidade
+  ("onde o fogo costuma acontecer") é o que MapBiomas e BDQueimadas já entregam, e o que
+  a literatura brasileira já fez (Triunfo do Xingu, doi:10.1016/j.jsames.2025.105366).
+  Ignição é condicional ao **acontecer** — e por isso exige horizonte temporal e
+  features de pressão antrópica e de combustível.
 - **Unidade:** célula de análise (1 km) recortada em UC + ZA; agregação para a UC.
-- **Rótulo:** área queimada (dNBR / MCD64A1 / MapBiomas Fogo) — com cuidado: POINT
-  (foco) herda viés de detecção; área queimada é mais completa mas atrasa 16–30 dias.
+- **Rótulo:** área queimada (dNBR / MCD64A1 v6.1 / MapBiomas Fire Collection 5.1) — com
+  cuidado: POINT (foco) herda viés de detecção; área queimada é mais completa, mas
+  atrasa (atraso oficial **NÃO VERIFICADO**; observado em GEE: `MODIS/061/MCD64A1` com fim em
+  2026-08-01 em 21/10/2026).
+  - **Correção de detectabilidade — obrigatória.** Rótulo de área queimada
+    carrega o viés do satélite: onde o céu é cronicamente encoberto, quase nada é
+    mapeado e o modelo aprende "nuvem = baixo risco". Evidência: Berman et al. 2023
+    (*Int. J. Wildland Fire* 32(5):665, doi:10.1071/WF22022) mede ~3.800 ha de
+    subestimação por nuvem num caso; Giglio et al. 2016 documenta o viés do
+    Collection 6. **Consequência:** as variáveis de detectabilidade (fração de nuvem,
+    geometria de visada) entram como *nuisances* e são **retiradas** antes de reportar os
+    drivers do alerta — senão a explicação explica o satélite, não o risco.
+  - **Validação:** holdout **por UC** (não por AOI equivalente) — é o que separa
+    "modelo que generaliza" de "modelo que decorou". Transferência Cerrado→Amazônia não
+    é automática (Podschwit et al. 2022, caso peruano, doi:10.1186/s42408-022-00150-7).
 - **Features:** LST (MOD11A1), NDVI, chuva (CHIRPS/ERA5), seca (SAF/EDMI), cobertura de
   combustível (WorldCover/MapBiomas), distância a contratos de transição *(pasto em pousio =
   capim seco = combustível)*, distância a concessões *(TIPO A = pressão alta)*, borda de UC,
@@ -535,9 +566,31 @@ regional. Não é vitrine, não é tutorial, não é página institucional.
 - **Calibração:** isotônica/Platt → o número em % precisa significar algo.
 - **Métricas:** AUC-PR, **precision@k** ("dos 10% de maior risco, quanto queimou?"),
   Brier/curva de calibração, recall@k por UC.
-- **SHAP:** global (drivers do modelo) e local (drivers do alerta daquela UC).
+- **SHAP:** global (drivers do modelo, para o model card) e **local por UC, dentro do
+  alerta** (o que puxou o score daquela UC para cima). SHAP explica a **previsão do
+  modelo**, não "responsabilidade causal" — a linguagem do alerta e do paper tem de
+  respeitar isso.
+  - **Não é o mesmo que SHAP sobre detecção.** Explicar por que o sensor disparou
+    aqui é explainable-AI de instrumento (geometria de visada, horário da passagem) — para
+    o gestor é ruído, e vendê-lo como "por que queimou" seria enganoso.
+  - A explicação local de um **modelo global** não é um modelo da UC: é a
+    transferência do driver para aquela UC, e tem de ser declarada assim. Recomendação:
+    **modelo global + calibração por UC** (29 modelos por UC não tém dados).
 - **Repo:** `ml-fire-alert` (recriado). Entrega ao sistema como **artefato versionado** +
   `model_card.json` (D-006).
+- **Baseline a bater (e não a copiar):** "Risco de Fogo" do INPE (FWI observado + previsão
+  3 dias) e "Perigo de Fogo" do ALARMES (curto prazo 5 dias + sazonal 3 meses). São **perigo
+  meteorológico** — condicional à ignição, sem features de pressão
+  antrópica nem de combustível. O início do paper tem de ser explicitamente
+  **contra esses dois**, e o model card tem de declarar o ganho **por UC**.
+- **Ortogonalidade entre as frentes:** a frente A **não** usa "distância ao fogo mais
+  próximo" (isso é nowcast = frente B). Risco de ignição e propagação são
+  perguntas diferentes.
+- **Limitações a declarar no model card e no paper:** SHAP ≠ causal · a explicação
+  herda o viés do rótulo · transferência entre biomas · confundidores
+  (distância a contrato/estrada é ao mesmo tempo driver e proxy de "onde há gente") ·
+  "fogo de manejo" como **limitação declarada** (D-009) · SHAP local de modelo global
+  ≠ modelo da UC.
 
 > **Revisado em 21/10/2026 (T0)** — `docs/ESTADO_DA_ARTE.md` §2.5, §2.7 e §4.
 >

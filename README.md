@@ -9,14 +9,22 @@ e previsão de risco de ignição nas 29 Unidades de Conservação estaduais do 
 
 ## O que o sistema faz
 
+**O NGEO é um serviço de notificação institucional.** Detecta fogo por satélite,
+avalia contra as áreas do IDEFLOR-Bio e **notifica a Gerência Regional que responde pela
+área** — com a zona do plano de gestão citada, a incerteza posicional declarada e o
+registro do que foi notificado. Não é um produto de dado de fogo: estatística
+histórica por UC, área queimada e índice de perigo meteorológico já existem e são
+melhores em outros (BDQueimadas, MapBiomas Fire Collection, INPE, ALARMES) — ver
+`docs/ESTADO_DA_ARTE.md` §5 e `DECISIONS.md` D-016.
+
 | Módulo | Função |
 | :--- | :--- |
 | Ingestão NRT | Focos de incêndio de múltiplos satélites (FIRMS VIIRS 375 m / MODIS 1 km; NOAA GOES ABI FDC 2 km a 10 min; INPE Programa Queimadas). Latência: **&lt; 3 h** (FIRMS NRT) e **≤ 30 min** de recência (GOES) |
-| Processamento | Clusterização espaço-temporal de focos em ocorrências; desduplicação entre sensores; incerteza posicional explícita |
-| Motor de regras | Geração de alerta por UC e roteamento à Gerência Regional, conforme cadastro oficial DGMUC |
-| Entrega | Multicanal (e-mail, Telegram, WhatsApp, webhook) com registro de auditoria das notificações |
-| Painel WebGIS | MapLibre GL JS; heatmap de focos; filtros por gerência e janela temporal; modo claro/escuro; pacote offline por UC |
-| Risco de ignição | XGBoost com validação espacial (block CV) e calibração de probabilidade; explicabilidade SHAP — repositório de pesquisa próprio |
+| Processamento | Clusterização espaço-temporal de focos em ocorrências; desduplicação entre sensores **por grupo** (nada é apagado); incerteza posicional explícita |
+| Motor de regras | Geração de alerta por UC e **encaminhamento** à Gerência Regional, conforme cadastro oficial DGMUC; severidade graduada e confiança declarada |
+| Entrega | Multicanal (e-mail, Telegram, WhatsApp, webhook) com **registro imutável** de auditoria das notificações |
+| Painel WebGIS | MapLibre GL JS; **fila de alertas por gerência** como objeto primário; mapa e heatmap como contexto; pacote offline por UC |
+| Risco de ignição | P(ignição na UC em N dias): XGBoost com validação espacial e holdout **por UC**, calibração de probabilidade e **SHAP local dentro do alerta** — repositório de pesquisa próprio |
 | Propagação | Nowcast do fogo ativo: perímetro estimado, vento e classe de combustível |
 
 ## Responsabilidade
@@ -25,6 +33,12 @@ O NGEO **detecta e notifica**. O protocolo de combate e a ação em campo são d
 Regional**; o sistema não implementa fluxo de atendimento nem avalia o que o plano de
 gestão permite em cada zona. O alerta entrega material factual — UC, zona, coordenada,
 severidade, confiança — e a decisão é do gestor.
+
+**Fronteira de produto (D-016):** o NGEO não faz estatística histórica de fogo por UC, não
+reprocessa área queimada nem índice de perigo, não faz app de alerta por proximidade e não
+faz ferramenta de campo citizen-science. O que ele faz e que ninguém faz: **encaminhar o
+evento à instituição que responde pela área**, citando a zona do plano de
+gestão, com a incerteza declarada e o registro auditável da notificação.
 
 ## Estado
 

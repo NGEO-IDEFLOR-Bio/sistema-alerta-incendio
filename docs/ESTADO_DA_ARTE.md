@@ -34,7 +34,9 @@
    dentro do FlamMap) e precisa de mapa de combustível; **não existe fuel map padronizado
    para a Amazônia** em resolução operacional. O precedente brasileiro (FISC-Cerrado,
    UFMG+INPE) **construiu** o mapa de combustível. Isso é a dependência dura da frente B.
-5. **A lacuna do NGEO se sustenta em 2 de 4 e não em 2 de 4.**
+5. **A lacuna do NGEO se sustenta em 2 de 4 e não em 2 de 4.** (Reapurado em 21/10/2026
+   com ALARMES/SIFAU/Savana: o veredito **não muda** — nenhum deles endereça o evento
+   à gerência nem cita a zona do plano.)
    - ✅ **Roteamento institucional por Gerência Regional** — nenhum produto audited
      (INPE, Censipam, MMA, SEMA-AM/MT, FISC-Cerrado) endereça o evento à gerência da UC.
    - ✅ **Citação do zoneamento do plano de gestão no alerta** — nenhum produto auditado
@@ -107,7 +109,9 @@ traz `bright_ti4`/`bright_ti5`; MODIS traz `brightness`/`bright_t31`.
 | Atributo | Fato verificado | Fonte |
 | :--- | :--- | :--- |
 | ⚠️ MapBiomas **Alerta** | **É desmatamento, não fogo.** "MapBiomas Alerta é um sistema de validação e refinamento de alertas de desmatamento com imagens de satélite de alta resolução"; alertas **semanais** | <https://alerta.mapbiomas.org/> |
-| MapBiomas **Fogo** (Coleção 5) | Mapeamento **anual e mensal** de cicatrizes, **1985–2025**; método **Landsat 30 m** + deep neural network; validação contra MCD64A1, GABAM, FIRE CCI, INPE focos, FIRMS, ICMBIO | <https://brasil.mapbiomas.org/en/mapbiomas-fogo> · <https://brasil.mapbiomas.org/wp-content/uploads/sites/4/2026/05/ATBD-MapBiomas-Fogo-Colecao-5.pdf> |
+| MapBiomas **Fogo** (Coleção 5 / 5.1) | Mapeamento **anual e mensal** de cicatrizes, **1985–2025**; método **Landsat 30 m** + deep neural network; validação contra MCD64A1, GABAM, FIRE CCI, INPE focos, FIRMS, ICMBIO | <https://brasil.mapbiomas.org/en/mapbiomas-fogo> · <https://brasil.mapbiomas.org/wp-content/uploads/sites/4/2026/05/ATBD-MapBiomas-Fogo-Colecao-5.pdf> |
+| **Assets GEE** (não é "coleção" é um nome de pasta) | `projects/mapbiomas-public/assets/brazil/fire/collection5/mapbiomas_fire_collection5_annual_burned_v1` (anual) · `.../collection5_1/mapbiomas_fire_collection51_monthly_burned_v1` (mensal, Coleção 5.1) · `..._severity_class_v1` · `..._interval_since_fire_v1` · `..._fire_frequency_v1` · `..._year_last_fire_v1` · `..._time_after_fire_v1` · `.../fire/monitor/mapbiomas_fire_monthly_burned_v1` (Monitor do Fogo, Sentinel-2, mensal, desde 2019) | <https://brasil.mapbiomas.org/en/mapbiomas-fogo> · <https://brasil.mapbiomas.org/downloads/assets-no-google-earth-engine/> |
+| ⚠️ **A plataforma MapBiomas já entrega estatísticas por áreas protegidas** | "downloading of tables and charts organized by different territorial units such as biomes, states, and municipalities, as well as land tenure categories like **protected areas**, indigenous territories, rural settlements, and quilombola territories" | <https://brasil.mapbiomas.org/en/mapbiomas-fogo> |
 | "Monitor do Fogo" | Mosaicos **Sentinel-2**, periodicidade **mensal**, desde 2019 | <https://brasil.mapbiomas.org/en/mapbiomas-fogo> |
 | Uso no NGEO | **Rótulo histórico** de área queimada (frente A) — **não** serve como detecção NRT (mensal/anual) | idem |
 | GEE assets | `projects/mapbiomas-public/assets/brazil/fire/collection5/...` | <https://brasil.mapbiomas.org/en/mapbiomas-fogo> |
@@ -222,7 +226,7 @@ geometria por círculo, o que casa com a incerteza posicional do foco.
 | :--- | :--- |
 | **Cavalcante, R.B.L. et al. (2021)** — *"Assessment of fire hazard weather indices in the eastern Amazon: a case study for different land uses"*, *Acta Amazonica* 51(4). DOI **10.1590/1809-4392202101172**. Avalia **7 índices** de perigo meteorológico em **Canaã dos Carajás (Pará)** | <https://acta.inpa.gov.br/fasciculos/51-4/PDF/AA-2021-0117.pdf> |
 | **Forests 17(4):437 (2026)** — *"Danger of Vegetation Fires in the Cerrado-Amazon Transition Region"*: Ängstrom, FMA, FMA+, EVAP/P, P-EVAP, INMET + reanálise Copernicus, validação por *Skill Score* | <https://www.mdpi.com/1999-4907/17/4/437> |
-| **NHESS 26:4257 (2026)** — projeta o FFDI (McArthur) no Brasil, entre：Austrália, Brasil e EUA; transição "preparação → temporada" avança 12–32 d no Brasil a +2 °C | <https://nhess.copernicus.org/articles/26/4257/2026/nhess-26-4257-2026.html> |
+| **NHESS 26:4257 (2026)** — projeta o FFDI (McArthur) no Brasil, entre—gungão: Austália, Brasil e EUA; transição "preparação → temporada" avança 12–32 d no Brasil a +2 °C | <https://nhess.copernicus.org/articles/26/4257/2026/nhess-26-4257-2026.html> |
 | **IOP 10.1088/2752-5295/ae249a (2025)** — FWI na América do Sul: Sul do Brasil, Paraguai, norte da Argentina e Bolívia já excederam limiares de emersão | <https://iopscience.iop.org/article/10.1088/2752-5295/ae249a> |
 | ⚠️ **Conclusão honesta:** existe **avaliação e projeção** de índices meteorológicos no Brasil e na Amazônia. **Não foi localizada** uma versão do FWI/FFDI **calibrada para a Amazônia tropical** usada operacionalmente. | idem |
 
@@ -337,6 +341,7 @@ confirmado em nenhum dos itens acima.
 | **LANDFIRE** (30 m, fuels + topografia) cobre **apenas os EUA** | <https://www.landfire.gov/data> |
 | O **EFFIS Fuel Map** cobre a Europa | <https://forest-fire.emergency.copernicus.eu/applications/data-and-services> |
 | ⚠️ **Para a Amazônia não foi localizada fuel map padronizada de resolução operacional.** O próprio FISC-Cerrado precisou **construir** carga de combustível e umidade de vegetação a partir de MODIS/Sentinel-2 | <https://www.nature.com/articles/s41598-023-30560-9> |
+| **Mas existe método publicado e implementação brasileira de mapa de combustível** | O **SIFAU** (Wetlands International + LASA/UFRJ + UFMS) publica **"Material Combustível (Franke et al. 2018), mensal, 100 m"**, gerado a partir de Landsat, "indica a biomassa superficial disponível para queima" | <https://alarmes.lasa.ufrj.br/sifau/> | ⚠️ a citação de Franke et al. (2018) é **do SIFAU**; o artigo **não foi lido** nesta sessão. **Reduz a estimativa de custo da frente B** |
 | **Global Fire Atlas** (ORNL DAAC, DOI 10.3334/ORNLDAAC/1642): por incêndio individual, tamanho, duração, **velocidade e direção de propagação**, derivado de MCD64A1 — **alvo empírico de calibração**, não mapa de combustível | <https://www.earthdata.nasa.gov/data/catalog/ornl-cloud-cms-global-fire-atlas-1642-1> |
 
 **(b) Por que sem fuel model local a simulação é frágil.**
@@ -408,6 +413,9 @@ confirmado em nenhum dos itens acima.
 | **PEPIF** (Pará) | SEMAS/PA | programa estadual de prevenção e combate | UF | anual/temporada | Não | <https://www.gov.br/mma/pt-br/noticias/governo-federal-realiza-alinhamento-para-discutir-medidas-de-prevencao-e-combate-a-incendios-florestais> |
 | **FISC-Cerrado** | UFMG + INPE | **previsão de propagação 3×/dia** | 500 m (Cerrado) / 20 m (9 UCs) | ~8 h | Não (painel web) | <https://www.nature.com/articles/s41598-023-30560-9> |
 | **"Amazônia em Chamas"** | IPAM | notas técnicas analíticas | UF/município/bioma | mensal | Não | <https://ipam.org.br/bibliotecas/amazonia-em-chamas-a-qualidade-do-ar-em-2024-e-2025> |
+| **ALARMES** | LASA / IGEO / UFRJ | Área Queimada (375 m, diário, prob. por pixel 0–1, área mín. detectável 14 ha, atraso ~1 dia) · Estatísticas por ROI · **Perigo de Fogo** (curto prazo 5 dias + sazonal 3 meses) · Dificuldade de Controle de Incêndios · SPEI · **Fogoteca** (registros de campo) · *Panorama Ignições Naturais* e *Probabilidade de Excedência* (em breve) · **alerta por e-mail para ROI** | ponto 375 m; ROI | diário | **Parcial** (e-mail por ROI) | <https://alarmes.lasa.ufrj.br/> · <https://alarmes.lasa.ufrj.br/faq/> |
+| **SIFAU** | Wetlands International Brasil + LASA/UFRJ + PELD-NEFAU-UFMS | Sistema de Inteligência do Fogo em áreas úmbidas: ALARMES diário + previsão de perigo 6 dias + **material combustível (Franke et al. 2018, mensal, 100 m)** + LCLU MapBiomas; adotado por **decreto do MS** (9/04/2024) | Pantanal / MIF | diário | Não | <https://alarmes.lasa.ufrj.br/sifau/> |
+| **Savana** (privado) | Savana Farms | **FIRMS + raio de proteção + WhatsApp/e-mail/app**, varredura a cada 15 min, com distância até a borda e direção do vento | ponto + raio (1/2/5/10 km) | ~15 min | **Sim** (comercial, R$ 49,90/imóvel/mês) | <https://savanaap.com.br/monitoramento-de-queimadas> |
 
 **Detalhe institucional do próprio IDEFLOR-Bio** (relevante para o NGEO): as Diretrizes
 Técnicas 2025 (1ª ed.) exigem, nas Unidades de Recuperação sob concessão, *"programa de
@@ -430,6 +438,14 @@ são privados e o primeiro declara explicitamente *"não é um sistema de alerta
 incêndio no Brasil — "FireEye" é empresa de cibersegurança. O sistema real do SP é a
 Operação São Paulo Sem Fogo / Fundação Florestal.
 
+**Três produtos que a primeira apuração (21/10/2026, manhã) não cobriu e que mudam o
+quadro da diferenciação:** ALARMES (LASA/UFRJ), SIFAU e Savana (ver tabela acima).
+Eles **não abafam a lacuna** (nenhum endereça à gerência da UC, nenhum cita a zona do
+plano, nenhum tem SHAP local por UC), mas **ocupam definitivamente** o espaço "estatística
+de fogo por ROI/UC" e "alerta por proximidade" — e o ALARMES já tem dois produtos *em breve*
+próximos da frente A (*Panorama Ignições Naturais*, *Probabilidade de Excedência*).
+Consequência registrada em `DECISIONS.md` D-016.
+
 ---
 
 ## 6. A lacuna: o que nenhum sistema faz e o que o NGEO faria
@@ -444,8 +460,11 @@ não "provavelmente não existe".
 | **SHAP local auditável por UC** | **Parcialmente** — B5 (Cerrado, preprint jun/2026) tem hold-out **por AOI** e **SHAP por AOI**; B1 (Triunfo do Xingu, Amazônia) tem SHAP em **uma** UC — mas para **susceptibilidade**, não ignição, e sem horizonte temporal | ⚠️ **LACUNA PARCIAL E FRÁGIL.** A originalidade pretendida precisa ser requantificada: o que é novo é (a) **ignição** com horizonte de dias, (b) **risco por UC do IDEFLOR**, (c) **SHAP local no alerta** (não só no paper). Não é "SHAP por UC", que já existe |
 | **Uso offline em campo** | **Não** — nenhum produto oficial auditado oferece pacote offline; as ferramentas são web/API | ⚠️ **NÃO É LACUNA DE DOMÍNIO.** É decisão de produto/engineering do NGEO (issue #17) e, como tal, não sustenta uma alegação de.originalidade científica |
 
-**Veredito:** a lacuna do NGEO **se sustenta em 2 de 4** — e são as duas que são
-estruturalmente suas (roteamento + zoneamento). As outras duas são **parcial** (SHAP) e
+**Veredito (reapurado em 21/10/2026 com ALARMES/SIFAU/Savana):** a lacuna do NGEO **se
+sustenta em 2 de 4** — e são as duas que são estruturalmente suas (roteamento +
+zoneamento). Nenhum dos três produtos novos (ALARMES, SIFAU, Savana) endereça o evento à
+gerência da UC, cita a zona do plano de gestão, ou entrega SHAP local por UC dentro de um
+alerta operacional. As outras duas são **parcial** (SHAP) e
 **de produto** (offline). Isso é dito aqui para que o README e o paper não afirmem o que
 não se sustenta: a originalidade do NGEO está em **conectar dado de satélite a uma
 cadeia institucional específica**, não em inventar método de ML.
@@ -644,7 +663,7 @@ tem de mostrar o círculo de incerteza (AGENTS, regra de domínio).
 <https://www.earthdata.nasa.gov/data/catalog/ghrc-daac-wwllnmth-1> ·
 <https://essd.copernicus.org/preprints/essd-2021-89/essd-2021-89.pdf>
 
-**Sistemas no Brasil:** <https://panorama.sipam.gov.br/painel-do-fogo/api/swagger> ·
+**Sistemas no Brasil (complemento):** <https://alarmes.lasa.ufrj.br/> · <https://alarmes.lasa.ufrj.br/faq/> · <https://alarmes.lasa.ufrj.br/sifau/> · <https://savanaap.com.br/monitoramento-de-queimadas> · <https://brasil.mapbiomas.org/downloads/assets-no-google-earth-engine/> · <https://panorama.sipam.gov.br/painel-do-fogo/api/swagger> ·
 <https://www.gov.br/censipam/pt-br/central-de-conteudos/noticias/o-painel-do-fogo-ja-esta-disponivel> ·
 <https://www.gov.br/ibama/pt-br/assuntos/fiscalizacao-e-protecao-ambiental/manejo-integrado-do-fogo/prevfogo> ·
 <https://www.gov.br/mma/pt-br/composicao/secd/comite-nacional-de-manejo-integrado-do-fogo-comif/ResoluoCOMIFN2.pdf> ·
@@ -674,3 +693,5 @@ tem de mostrar o círculo de incerteza (AGENTS, regra de domínio).
 | "SAF/EDMI" como índice de seca | Sigla **não verificada**; usar SPI/SPEI/scPDSI/MCWD + ANA/CEMADEN | PLANO §10 |
 | ITU-R BT.839 como padrão de alerta | **Não localizada**; o padrão real é **CAP (ITU-T X.1303 / OASIS v1.2)** | DECISIONS D-014 |
 | "SHAP local auditável por UC" como originalidade | Já existe no Cerrado (arXiv:2606.04170) e em uma UC amazônica (Triunfo do Xingu) | Este doc, §6-f |
+| "Alerta de fogo" como produto do MapBiomas | MapBiomas **Alerta** = desmatamento; o de fogo é **Fire Collection 5/5.1** (anual/mensal, Landsat 30 m) | Este doc, §1.3 |
+| "Existe produto de risco no Brasil" | Existe **perigo meteorológico** (INPE, ALARMES) — condicional à ignição. **Risco de ignição por UC**: não verificado | Este doc, §2.5, §5 |

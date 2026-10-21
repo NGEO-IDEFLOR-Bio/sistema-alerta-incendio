@@ -500,3 +500,68 @@ campo; a frente A é intrinsecamente diária e não pode ser vendida como "tempo
 > NRT)** + **risco diário**. A decisão **não foi revogada** — foi corrigida com a
 > evidência da apuração (`docs/ESTADO_DA_ARTE.md` §1.1 e §8-RK6).
 
+---
+
+## D-016 — Fronteira de produto: o que o NGEO é e o que ele não é
+
+**Data:** 21/10/2026 · **Status:** vigente
+
+**Apurado em:** `docs/ESTADO_DA_ARTE.md` §5 e §6 (21/10/2026), depois de identificar
+**ALARMES** (LASA/UFRJ), **SIFAU** (Wetlands International + LASA/UFRJ + UFMS), **Savana**
+(privado) e a plataforma **MapBiomas Fire Collection 5** — produtos que a primeira
+apuração da T0 não tinha coberto.
+
+**Por quê:** o espaço "informação de fogo no Brasil" está ocupado, e por bons
+produtos. Sem uma **fronteira explícita**, o projeto corre o risco de virar uma versão
+pior do BDQueimadas: mesma tabela de focos, mesmo painel de estatística, arquivo
+histórico menor. A fronteira é o que impede a deriva.
+
+### 16.1 As três camadas
+
+| Camada | É repetição? | Fundamento |
+| :--- | :--- | :--- |
+| **Detecção (foco de calor)** | **Sim — e tem que ser.** Ninguém vai detectar melhor que o FIRMS. Consumir e **qualificar** não é cópia. | `docs/ESTADO_DA_ARTE.md` §1, §7 |
+| **Agregração / estatística histórica** | **Sim — e por isso NÃO construímos.** BDQueimadas (1998→), MapBiomas Fire Collection 5 (1985–2025, com recorte por *áreas protegidas* na plataforma), ALARMES (estatísticas diárias por ROI). Quem faz isso tem arquivo maior. | `docs/ESTADO_DA_ARTE.md` §5 |
+| **Risco de ignição (frente A)** | **Ainda não — é a aposta.** No Brasil só existe **perigo meteorológico** (FWI/FFDI), que é **condicional à ignição**. | `docs/ESTADO_DA_ARTE.md` §2.5, §5 |
+| **Explicabilidade local por UC** | **Parcialmente.** Existe em paper (Cerrado, arXiv:2606.04170; Triunfo do Xingu, doi:10.1016/j.jsames.2025.105366) — mas para *susceptibilidade*/*detecção*, não para ignição, e **não dentro de um alerta operacional**. | `docs/ESTADO_DA_ARTE.md` §2.7 |
+| **Encaminhamento institucional + zona do plano + registro auditável** | **Não.** Nenhum produto auditado endereça o evento à gerência da UC, cita a zona do plano, ou guarda o registro imutável do que foi notificado e quando. | `docs/ESTADO_DA_ARTE.md` §6-f |
+
+### 16.2 Posicionamento (frase)
+
+> O NGEO **não é um produto de dado de fogo**; é um **produto de notificação
+> institucional** construído sobre dado que outros já produzem.
+
+### 16.3 Guardas: o que o NGEO **não** vai construir
+
+1. **Estatística histórica de fogo por UC.** BDQueimadas, MapBiomas e ALARMES já têm, com
+   arquivo histórico maior e cobertura já geográfica.
+2. **Reprocessar área queimada.** MapBiomas Fire Collection 5.1 (anual e mensal, Landsat 30 m) e
+   ALARMES (diário, 375 m) já fazem. Consumir como **rótulo/validação** (frente A / F8).
+3. **Reprocessar índice de perigo de fogo.** INPE ("Risco de Fogo") e ALARMES ("Perigo de Fogo")
+   já fazem. Usar como **baseline** contra o qual a frente A se posiciona.
+4. **App de alerta por proximidade.** Savana (e similares) já fazem, com FIRMS + raio +
+   WhatsApp, comercial. Nosso destinatário é a **instituição**, não o proprietário.
+5. **Ferramenta de campo citizen-science.** A Fogoteca do ALARMES já existe. Nosso ativo de
+   campo é o **Pacote da UC offline** (issue #17), para a operação da gerência.
+6. **Painel de estatística histórica como feature do MVP.** O painel do NGEO mostra
+   **fila de alertas por gerência**; o heatmap de focos é contexto, não produto.
+
+### 16.4 Objeto primário do dashboard
+
+A **fila de alertas por Gerência Regional** ç o objeto primário. O mapa ç o lugar onde
+o fato acontece; a fila ç onde o trabalho acontece. (PLANO §9)
+
+### 16.5 Efeito na frente A (ver PLANO §10, revisado)
+
+- Alvo: **risco de ignição** (P(ignição na UC em N dias)), **não
+  susceptibilidade**. Susceptibilidade é o que MapBiomas/BDQueimadas já entregam.
+- O **SHAP local por UC entra no alerta**, com os drivers **retirados das variáveis de
+  detectabilidade** (nuvem/visada), para que a explicação seja sobre risco e não sobre o
+  satélite.
+- `RISCO_ALTO` só dispara com **novidade** (mudança de faixa desde o último alerta da UC),
+  não todo dia — para não virar rotina e perder a confiança da gerência (D-010).
+- A frente A **não** usa "distançia ao fogo mais próximo" (isso é frente B).
+
+**Implica:** PLANO §7, §9 e §10 revisados; `README.md` reescrito como serviço
+institucional; `docs/ESTADO_DA_ARTE.md` §5 e §6-f atualizados com ALARMES, SIFAU, Savana e
+MapBiomas Fire Collection.
