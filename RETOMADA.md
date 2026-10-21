@@ -27,8 +27,12 @@
 - **Dados de referência recebidos (21/10/2026):**
   - `data/shapes_de_todas_as_unidades_com_gerencia.geojson` — **29 UCs com gerência DGMUC**
     (9 gerências), `id` 1..29, EPSG:4326. Digest e procedência em `data/README.md`.
-  - `visualizador/data/zoneamentos_ucs_estaduais.geojson` — **252 zonas de plano de manejo
-    em 16 UCs**. Entra **verbatim** (D-009): sem taxonomia global, sem normalização.
+  - `visualizador/data/zoneamentos_ucs_estaduais.geojson` — **252 zonas de plano de manejo**.
+    Entra **verbatim** (D-009): sem taxonomia global, sem normalização.
+    ✅ **Medido na F1 (21/10/2026):** 243 zonas resolvidas a uma UC por **sobreposição
+    espacial**, 9 sem UC (8 sem sobreposição + 1 sem geometria no arquivo) →
+    **20 das 29 UCs** têm zoneamento (o repo afirmava 16 — contagem de strings do campo
+    truncado `UNIDADE`; issue #24 e #38).
   - ✅ **Issue #21 resolvida no arquivo**: `GRCN-l/ll/lll` → `GRCN-I/II/III`, sem tocar em
     geometria (29 features, mesmos bytes). Digest original e corrigido no `data/README.md`.
 - **Decisões fechadas:** D-001 MapLibre · D-002 duas frentes em paralelo ·
@@ -116,20 +120,40 @@
 
 
 
+## F1 (fundação local) — ✅ concluída em 21/10/2026
+
+- `docker-compose.yml`: PostGIS 16-3.6 + Redis 7, volumes persistentes, healthcheck,
+  porta exposta **só em loopback**. **Porta 5433** (a 5432 já tinha um Postgres local —
+  armadilha #4 do BUILD.md).
+- `backend/src/ngeo/`: `core` (settings), `db` (engine/sessão/ORM), `models` (pydantic),
+  `api` (health), `services` (referência + seed), `adapters` e `workers` (F2 em diante).
+- **Migração Alembic `20261021_0001`**: 13 tabelas do §5 (incl. `focos_grupos`,
+  `fontes`, `parametros_dedup` — D-013/D-014). `upgrade head` **e** `downgrade base`
+  verificados.
+- **Seeds**: `scripts/seed_{gerencias,ucs,zonas,fontes,all}.py` — idempotentes, com
+  verificação de integridade que **falha** (issue #21). Carga completa: **~28 s**.
+- `GET /api/health`: status, versão do schema e contagens (ucs, gerências, zonas,
+  zonas_sem_uc) — **sem senha** no payload.
+- **48 testes** verdes (`pytest`), `ruff check`/`format` limpos, `docker compose config`
+  válido.
+- **Correções de premissa que a F1 trouxe:** o `DATABASE_URL` do `.env.example` usava
+  `postgresql+postgis://`, que **não existe** no SQLAlchemy — agora é
+  `postgresql+psycopg2://` + `CREATE EXTENSION postgis` na migração (issue #34).
+
 ## Próximo passo (1 item)
 
-1. **T1 — Fundação local (PostGIS + Redis + schema + seed).**
-   `docker-compose.yml`, `backend/` com pyproject/Alembic, o schema de
-   `PLANO_ARQUITETURA.md` §5 (agora com `focos_grupos`, `fontes` e `parametros_dedup`),
-   seeds das 9 gerências, das 29 UCs e das 252 zonas (verbatim, por sobreposição
-   espacial), e `GET /api/health`.
-   Prompt pronto em `TAREFAS.md` → T1.
-   ⚠️ Antes de começar: preencher `DATABASE_URL` no `.env` (issue #34).
+1. **T2 — Ingestão multi-fonte de focos (F2).**
+   `adapters/base.py` + `firms.py` (VIIRS e MODIS), `inpe.py` (Programa Queimadas),
+   `goes_abi.py` (NOAA ABI L2 FDC), worker Celery, dedup cross-sensor por grupo
+   (`focos_grupos`) e clustering em `eventos_fogo`.
+   Prompt pronto em `TAREFAS.md` → T2.
+   ⚠️ Pendências a resolver na T2: **#31** (reemitir a MAP_KEY do FIRMS sob e-mail
+   institucional), **#32** (calibrar a janela de dedup), **#33** (coletar o schema real de
+   MODIS, GOES e INPE — só o VIIRS foi coletado).
 
-## Próximos depois da T1
+## Próximos depois da T2
 
-T2 (ingestão multi-fonte + dedup cross-sensor) → T3 (motor de regras) → T4 (entrega)
-→ T5 (frontend).
+T3 (motor de regras) → T4 (entrega) → T5 (frontend).
 **Frente A (T6/T7) e Frente B (F7) entram em paralelo** a partir de F6.
 Na T2: uma **coleta real por fonte** (VIIRS já feita — issue #33 pede MODIS, GOES e INPE),
 calibração da janela de dedup (#32) e reemissão da MAP_KEY (#31).

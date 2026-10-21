@@ -1,0 +1,56 @@
+# NGEO — Sistema de Alerta de Incêndio Florestal
+#
+# Apenas infraestrutura LOCAL de desenvolvimento. Nada de produção aqui.
+#
+#   docker compose up -d          # sobe PostGIS + Redis
+#   docker compose ps             # espera "healthy"
+#   docker compose down           # PARA os containers (preserva o volume)
+#   docker compose down -v        # APAGA o volume — não usar se houver dado (BUILD.md, armadilha 7)
+#
+# O seed roda na HOST, contra o Postgres exposto em 127.0.0.1.
+# NÃO monte `H:\Meu Drive` dentro do container (BUILD.md, armadilha 3).
+
+name: ngeo-alerta
+
+services:
+  db:
+    image: postgis/postgis:16-3.6
+    container_name: ngeo-postgis
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-alerta_fogo}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    # Porta exposta SÓ em loopback: nada de rede externa.
+    ports:
+      - "127.0.0.1:${POSTGRES_PORT:-5432}:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test:
+        - CMD-SHELL
+        - pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-alerta_fogo}
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 30s
+
+  redis:
+    image: redis:7-alpine
+    container_name: ngeo-redis
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "127.0.0.1:${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redisdata:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 6
+      start_period: 10s
+
+volumes:
+  pgdata:
+  redisdata:

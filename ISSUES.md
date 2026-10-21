@@ -14,8 +14,8 @@
 | # | Issue | Status | Nota |
 | :--- | :--- | :--- | :--- |
 | **#02** | Bootstrap do repo (docs, `.gitignore`, `git init`) | ✅ feito | Fase F0 — 21/10/2026 |
-| **#03** | `docker-compose.yml` (PostGIS + Redis) + `scripts/` de seed | ⏳ pendente | F1 |
-| **#04** | Schema das tabelas canônicas | 🏗️ especificado | `PLANO_ARQUITETURA.md` §5 — implementar em F1 |
+| **#03** | `docker-compose.yml` (PostGIS + Redis) + `scripts/` de seed | ✅ **feito** (F1, 21/10/2026) | `docker-compose.yml` (PostGIS 16-3.6 + Redis 7, porta **5433** porque 5432 já tinha um Postgres local) + `scripts/seed_{gerencias,ucs,zonas,fontes,all}.py`. `docker compose config` válido |
+| **#04** | Schema das tabelas canônicas | ✅ **feito** (F1, 21/10/2026) | Migração Alembic `20261021_0001` — 13 tabelas do §5 (incl. `focos_grupos`, `fontes`, `parametros_dedup` do D-013/D-014). `upgrade head` e `downgrade base` verificados |
 | **#05** | Registro de chaves/licença por fonte de focos | 🟡 **parcial** | T0 (21/10/2026): tabela `fontes` especificada no PLANO §5.11 (resolução, latência, URL, termos, atribuição, licença, pin de versão). Falta popular e exibir a atribuição no painel/relatório — issue #07 |
 
 ## Qualidade de dados de referência (NOVO)
@@ -32,7 +32,7 @@
 
 | **#28** | Autenticação do dashboard | ⏳ pendente | MVP aberto em rede institucional. Autenticação só quando houver dado que exija (PII, por-ACESSO) |
 
-| **#24** | Zoneamento cobre só 16 das 29 UCs | 🟡 pendente | 13 UCs sem classificação de zona → alerta segue emitido **sem** contexto de zona (nunca suprimido). Degradar com honestidade + pedir as 13 restantes à DGMUC. |
+| **#24** | Zoneamento cobre parte das 29 UCs | 🟡 **parcial** | **Medido na F1 (21/10/2026): 20 das 29 UCs** têm zoneamento (o repo afirmava 16 — esse número vinha da contagem de strings do campo `UNIDADE`, truncado). **9 UCs** sem classificação de zona → alerta segue emitido **sem** contexto de zona, com limitação explícita (nunca suprimido) |
 | **#25** | Zonas de Amortecimento só para poucas UCs | 🟡 pendente | ZA cartografada em Trombetas, REVIS (setores I/II/III), Paru, Faro. Issue #15 original: **parcialmente resolvida** — ZA não é universal. |
 
 
@@ -56,9 +56,10 @@
 | **#31** | MAP_KEY do FIRMS emitida para **e-mail descartável** | 🟡 pendente | A chave foi obtida em 21/10/2026 e funciona (coleta real: 811 registros). Mas foi emitida para um e-mail temporário — reemitir sob **e-mail institucional**, guardar em `secrets/` e atualizar o `MAP_KEY` no `.env`. Enquanto isso: risco de perda de acesso ao portal de gerenciamento da chave |
 | **#32** | **Calibrar a janela temporal do dedup** (6 h, D-013) | ⏳ pendente | O valor de 6 h é uma **inferência** (espaçamento de passagem de órbita polar), **não verificada**. A F2 tem de calibrar contra dados reais (mesmo fogo visto por VIIRS/MODIS/GOES) e registrar o valor escolhido em `DECISIONS.md` (D-013) |
 | **#33** | Schema real de **MODIS, GOES e INPE** ainda não coletado | ⏳ pendente | Só o **VIIRS** foi coletado de verdade (21/10/2026). O schema do MODIS difere (`brightness`/`bright_t31`) e o GOES não é SOURCE do `/api/area` do FIRMS (`GOES_NRT` só em `/api/data_availability`). F2 precisa de uma chamada real por fonte antes de fixar o mapeamento |
-| **#34** | `DATABASE_URL` **vazio** no `.env` | ⏳ pendente | A `RETOMADA.md` afirmava que o `DATABASE_URL` (PostGIS) já estava no `.env`; em 21/10/2026 a variável existe mas está **vazia**. Preencher antes da F1 |
+| **#34** | `DATABASE_URL` **vazio** no `.env` | ✅ resolvido (F1) | Preenchido com `postgresql+psycopg2://postgres:postgres@localhost:5433/alerta_fogo` (driver psycopg2 — o `postgresql+postgis://` do `.env.example` antigo **não existe** no SQLAlchemy; a extensão postgis é criada na migração) |
 | **#36** | **Alerta de risco diário pode virar rotina** (e perder a confiança da gerência) | ⏳ pendente | D-016: `RISCO_ALTO` só dispara com **novidade** (mudança de faixa desde o último alerta da UC), além de cruzar o limiar. Implementar e testar na F3 |
 | **#37** | **Alerta de concorrência: ALARMES (LASA/UFRJ) tem dois produtos *em breve* na frente A** | ⏳ pendente | *Panorama Ignições Naturais* e *Probabilidade de Excedência de Área Queimada* (ambos "Em breve" em <https://alarmes.lasa.ufrj.br/>). A frente A só se sustenta como **ignição por UC + SHAP local no alerta**, não como "risco de fogo na Amazônia" genérico. Monitorar e posicionar o paper contra eles |
+| **#38** | **9 das 252 zonas não intersectam nenhuma das 29 UCs** | 🟡 **pendente** | Medido na F1. 8 não têm sobreposição (A2/OT1–OT5/ZNI) e 1 vem **sem geometria** no arquivo (ZR / Zona de Recuperação). **O campo `UNIDADE` dessas 9 mente**: aponta para Faro, Trombetas e Mosaico Lago de Tucuruí, mas a geometria está a 250 km dali. O join espacial (é o que vale) resolve 243. Registrar a divergência com a DGMUC/IDEFLOR |
 | **#35** | INPE: o nome "MONITORQUEIMADAS" não existe | 🟡 resolvido | O INPE mantém o **Programa Queimadas / BDQueimadas** (focos a cada 10 min, CSV/KML, WFS/WMS, **sem autenticação**). Nenhum registro oficial de "MONITORQUEIMADAS" em 21/10/2026. `DECISIONS.md` D-012 e PLANO §6 corrigidos |
 | **#14** | Geometria de referência: fonte única | 🟡 parcial | `data/` deste repo (gitignored) + `visualizador/data/`. Consolidar em `ngeo-assets` (issue #11 junto) |
 | **#15** | ~~Zonas de amortecimento das UCs~~ | 🟡 parcial | ZA existe para poucas UCs (Trombetas, REVIS, Paru, Faro) — ver #25 |

@@ -229,12 +229,19 @@ ucs (
 --     e = 'Zonas de Amortecimento' em Trombetas. Nunca usar como chave de regra.
 ucs_zonas (
   id        bigserial primary key,
-  uc_id     bigint references ucs(id),        -- resolvido por sobreposição espacial
+  uc_id     bigint references ucs(id),        -- resolvido por SOBREPOSIÇÃO ESPACIAL
   sigla     text,                            -- código original do zoneamento (verbatim)
   zona      text,                            -- texto original do plano (verbatim)
+  unidade_origem text,                       -- nome da UC como veio no arquivo (truncado) — auditoria
   area_ha   numeric,
-  geom      geometry(Polygon,4326)
+  join_metodo text,                          -- 'centroide_contido' | 'maior_intersecao'
+                                            -- | 'sem_intersecao' | 'sem_geometria'
+  join_n_candidatas int,                     -- quantas UCs a zona toca (>=2 = mosaico, revisar)
+  geom      geometry(Geometry,4326)          -- GEOMETRY: 44 das 252 zonas sao MultiPolygon
 );
+-- O `geom` e gravado ja saneado (ST_MakeValid): o arquivo do IDEFLOR tem
+-- auto-intersecao em varias features, e o `ST_Intersection` lanca TopologyException
+-- com geometria crua. O saneamento e tecnico, nao reinterpreta o zoneamento.
 
 -- 5.8 Curadoria por UC: NAO EXISTE.
 --     A zona do plano de gestão é INFORMAÇÃO, não variável. O sistema não avalia
@@ -247,7 +254,7 @@ ucs_zonas (
 | Arquivo | Registros | Uso |
 | :--- | :--- | :--- |
 | `data/shapes_de_todas_as_unidades_com_gerencia.geojson` | 29 UCs com `gerencia` + `id` 1..29 | `ucs` |
-| `visualizador/data/zoneamentos_ucs_estaduais.geojson` | 252 zonas em **16** das 29 UCs | `ucs_zonas` |
+| `visualizador/data/zoneamentos_ucs_estaduais.geojson` | 252 zonas; **20** das 29 UCs com zoneamento (medido na F1, 21/10/2026) | `ucs_zonas` |
 | `visualizador/data/concessoes_florestais_ideflor.geojson` | 11 concessões | feature de risco (frente A) |
 | `visualizador/data/contratos_de_transicao.geojson` | 43 contratos de transição | feature de risco (frente A) |
 | `visualizador/data/{terras_indigenas,quilombos_*,regioes_integracao}.geojson` | contexto | camadas do mapa |
@@ -275,9 +282,23 @@ ucs_zonas (
 do zoneamento está **truncado** ("Ambiental da Ilha de Combu", "Reserva Biológica do
 Maicuru (REBIO") e não casa com o nome da UC. Issue #23.
 
-**Cobertura:** o zoneamento cobre **16 das 29 UCs**. As 13 restantes **não têm**
-classificação de zona → o alerta segue sendo emitido, apenas **sem contexto de zona**,
-e o campo `zona_texto` fica nulo com a limitação explícita. Issue #24.
+**Cobertura (medida na F1, 21/10/2026 — não é estimativa):**
+
+| | |
+| :--- | :--- |
+| Zonas no arquivo | **252** |
+| Zonas resolvidas a uma UC | **243** |
+| Zonas sem UC | **9** (8 sem sobreposição espacial + 1 **sem geometria** no arquivo) |
+| **UCs com zoneamento** | **20 das 29** |
+| Gerências com pelo menos uma UC zonada | **8 de 9** (GRM/Marajó não tem) |
+
+> ⚠️ **Correção:** até a F0 o repo afirmava "16 das 29 UCs". Esse número vinha
+> da **contagem de strings distintas** no campo `UNIDADE` (16 strings) — exatamente o
+> erro que a issue #23 warns contra. O **join espacial** (a fonte da verdade) resolve
+> **20 UCs**: 117 das 252 zonas tocam **mais de uma** UC (103 tocam 2, 13 tocam 3, 1 toca
+> 4) — são mosaicos como o "Mosaico Lago de Tucuruí". As 9 UCs restantes **não têm**
+> classificação de zona → o alerta segue sendo emitido, apenas **sem contexto de zona**,
+> e o campo `zona_texto` fica nulo com a limitação explícita. Issue #24.
 
 
 
@@ -663,7 +684,7 @@ focos ──▶ cluster ──▶ perímetro estimado ──▶ modelo de propag
 | :--- | :--- | :--- |
 | **F0** | Bootstrap: docs, `.gitignore`, `git init`, este plano | — |
 | **F0b** | ✅ **Estado da arte + 1ª coleta real** (`docs/ESTADO_DA_ARTE.md`, `scripts/probe_firms.py`, decisões D-012..D-015) | F0 |
-| **F1** | Fundação: docker-compose (PostGIS+Redis), schema, seed de geometrias de referência, `/api/health` | F0b, **issue #01** |
+| **F1** | ✅ Fundação: docker-compose (PostGIS+Redis), schema (Alembic), seed de geometrias de referência, `/api/health` | F0b, **issue #01** |
 | **F2** | Ingestão multi-fonte → `focos` → `focos_grupos` (dedup) → `eventos_fogo` | F1, FIRMS key **reemitida sob e-mail institucional** (#13) |
 | **F3** | Motor de regras + `alertas` + `config_alerta` + `/api/alertas` | F2, **issue #01** |
 | **F4** | Entrega multi-canal (email → telegram/whatsapp/webhook) + log | F3 |

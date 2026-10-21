@@ -42,8 +42,10 @@ gestão, com a incerteza declarada e o registro auditável da notificação.
 
 ## Estado
 
-Fases **F0 (bootstrap)** e **F0b (estado da arte + 1ª coleta real)** concluídas.
-**Sem backend ainda** — a implementação começa na F1.
+Fases **F0 (bootstrap)**, **F0b (estado da arte + 1ª coleta real)** e **F1 (fundação
+local)** concluídas: PostGIS + Redis em `docker compose`, schema do §5 em migração
+Alembic, carga das 9 gerências / 29 UCs / 252 zonas de plano (verbatim) e
+`GET /api/health`. **A ingestão de focos ainda não existe** — é a F2.
 
 - **`docs/ESTADO_DA_ARTE.md`** — o que já existe (detecção NRT, modelos de risco,
   propagação, datasets, sistemas de alerta no Brasil/Amazônia), com URL e data de
@@ -57,6 +59,7 @@ Plano completo, decisões e pendências:
 | :--- | :--- |
 | [`PLANO_ARQUITETURA.md`](PLANO_ARQUITETURA.md) | Arquitetura, schema do banco, fases, riscos |
 | [`docs/ESTADO_DA_ARTE.md`](docs/ESTADO_DA_ARTE.md) | Estado da arte com fontes citadas + schema real observado |
+| [`BUILD.md`](BUILD.md) | Setup, verificação e armadilhas do ambiente |
 | [`DECISIONS.md`](DECISIONS.md) | Decisões datadas com motivo e implicações |
 | [`ISSUES.md`](ISSUES.md) | Pendências priorizadas |
 | [`TAREFAS.md`](TAREFAS.md) | Prompt pronto por sessão |
