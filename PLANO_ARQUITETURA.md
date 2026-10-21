@@ -131,10 +131,9 @@ alertas (
   possivel_falso_positivo boolean not null default false,
   n_focos         int not null,
   fontes_concordantes text[],             -- ex.: {FIRMS_VIIRS, GOES16}
-  -- contexto do plano de gestão (verbatim; pode ser nulo)
+  -- contexto do plano de gestão (verbatim; pode ser nulo). Fato, nunca instrução (D-011).
   zona_sigla      text,
   zona_texto      text,
-  ref_plano       text,
   zona_disponivel boolean not null default false,  -- false = UC sem zoneamento
   regra_id        text not null,
   titulo          text not null,
@@ -307,15 +306,17 @@ alerta**. O que muda é a severidade e a confiança declaradas:
 (anti-spam, não descarte). Filtros de geometria e qualidade (nuvem, chuva recente,
 fogo possivelmente de manejo) **qualificam a confiança**; nunca descartam.
 
-**A zona do plano de gestão entra como contexto, nunca como critério:**
+**A zona do plano de gestão entra como fato, nunca como interpretação:**
 
 - Foco dentro de uma zona de plano de manejo → **alerta é emitido do mesmo jeito**.
-- O alerta carrega `zona_sigla`, `zona_texto` (verbatim do plano) e `ref_plano`.
-- Mensagem: *"Foco em <UC> — zona *<texto do plano>*. O plano de gestão da UC define o
-  que é permitido ali; verificar antes de agir."*
-- **O sistema não julga** o que é permitido — o plano diz (D-009). Coerente com D-003.
+- O alerta carrega `zona_sigla` e `zona_texto` (verbatim do plano) e a coordenada.
+- Mensagem: *"Foco em <UC> — zona *<texto do plano>*. Posição <lat/lon> (±<resolução>)."*
+- **Nada de instrução.** Nada de "verifique antes de agir", nada de lembrete sobre o
+  plano, nada de interpretação. O gestor sabe qual é o plano da própria unidade; o
+  sistema entrega o fato (D-011).
 - Se a UC **não tem** zoneamento (13 de 29), o alerta é emitido **sem contexto de zona**,
   com a limitação explícita, e não com suposição.
+
 
 
 > Sem esse filtro, o sistema queima a confiança da gerência em poucas semanas.
@@ -332,16 +333,50 @@ Registry de canais, todos com log em `entregas`:
 | `whatsapp` | canal operacional no campo | Meta Cloud API; exige URL pública — o **Cloudflare Tunnel** já configurado no `.env` resolve |
 | `webhook` | integração com sistemas da gerência | genérico |
 
-Template padrão: *o que* (foco/pixel, com incerteza), *onde* (UC, zona do plano se
-conhecida, coordenada, link no mapa), *quando*, *severidade*, *confiança* (nº de focos,
-fontes concordantes, flag de possível falso positivo), *plano a consultar* (quando a UC
-tem zoneamento), *quem é o responsável*.
+**O alerta é um instrumento, não uma mensagem.** Ele entrega **material** para decisão
+rápida e nada mais:
 
-**O template não julga.** Se o foco cai em zona de plano de manejo, a mensagem diz qual
-zona é e que o plano define o que é permitido ali — e entrega o alerta normalmente
-(D-009, D-010).
+```
+FOCO DETECTADO — 21/10 14:22 BRT
+UC ........ Floresta Estadual do Trombetas (GRCN-II)
+Zona ....... Zonas de Amortecimento
+Posição .... 1.4587°S 56.7321°W  (±375 m)
+Severidade . ALTA        Confiança: ALTA
+Focos ...... 7 em 2h10   Fontes: FIRMS_VIIRS, GOES16
+[ abrir no mapa ]
+```
+
+- **Fatos, não conselhos.** Sem "verifique antes de agir", sem "recomenda-se", sem
+  "atenção", sem explicação de termo técnico. O destinatário é gestor de gerência
+  regional: conhece a unidade, o plano e o terreno.
+- **Só o que não é óbvio.** A UC e a zona identify o lugar; a severidade e a confiança
+  dizem o grau de certeza; o link abre o mapa. O resto é ruído.
+- **Coordenada em decimal e em UTM** (SIRGAS 2000, fuso 21S/22S) — é o que vai para o
+  GPS da equipe de campo. O EPSG exato fica resolvido no código (pyproj), não fixado
+  em doc.
+- Sem "quem é o responsável" no corpo: o **roteamento** já entrega à gerência certa.
+  A gerência responsável fica no registro do alerta, não na mensagem.
+
 
 ## 9. Frontend — MapLibre GL JS
+
+**Princípio de interface: instrumento, não narrativa (D-011).**
+
+O dashboard é para quem já sabe o que é uma UC, um foco de calor e uma gerência
+regional. Não é vitrine, não é tutorial, não é página institucional.
+
+- **Sem landing page.** O app abre direto no mapa, com a fila de alertas. Nada de
+  hero, scroll-telling, "saiba mais" ou CTA institucional.
+- **Sem texto explicativo.** Nenhum parágrafo, nenhum tooltip que explique o que é FRP
+  ou o que é zona de amortecimento. Legenda de mapa sim (é dado, não narrativa).
+- **Densidade alta.** Números na mesa. Gráfico mínimo. Sem parágrafo em lugar nenhum.
+- **Rótulos técnicos e curtos** — vocabulário do domínio, não de marketing:
+  `focos`, `FRP`, `severidade`, `confiança`, `janela`.
+- **Filtros e atalhos**, não tutoriais. O gestor que volta toda semana não quer ler
+  instruções.
+- **O mapa é a tela.** Painéis são secundários e retráteis.
+- **Aberto, sem login no MVP** (rede institucional). Autenticação só quando houver dado
+  que exija (issue #28).
 
 **Layout (HUD de centro de comando):**
 
@@ -431,10 +466,12 @@ focos ──▶ cluster ──▶ perímetro estimado ──▶ modelo de propag
 | **F6** | **Frente A** em paralelo: dataset, labels, block CV, calibração, SHAP | repo `ml-fire-alert` |
 | **F7** | **Frente B** em paralelo: perímetro estimado + propagação por vento | F2, F5 |
 | **F8** | Confirmação dNBR sob demanda → relatório de área queimada | F5, Sentinel Hub |
-| **F9** | Portal público / artefatos de paper (a partir da frente A) | F6 |
+| **F9** | *(não previsto)* | — |
 
-**MVP = F0–F5.** F9 (público) sai como **artefato da análise**, não como produto à parte:
-mapa retrospectivo + drivers SHAP globais.
+**MVP = F0–F5.** O portal público / scrollytelling **não está no plano**: a decisão é
+ferramenta funcional, não página institucional (D-011). Se um dia precisar existir, sai
+como artefato da frente A, fora do caminho crítico.
+
 
 ## 13. Identidade visual — `ngeo-ds` (D-005)
 
@@ -455,8 +492,10 @@ mapa retrospectivo + drivers SHAP globais.
 | R1 | ~~Mapeamento UC → gerência inexistente~~ **RESOLVIDO** | `data/shapes_de_todas_as_unidades_com_gerencia.geojson` (29 UCs, 9 gerências). Issue #21 resolvida no arquivo |
 | R1b | Sigla `GRCN-l` × `GRCN-I` criam gerências fantasma | ✅ corrigido no arquivo (21/10/2026); seed mantém validação 29 UCs / 9 gerências (#21) |
 | R1c | `SIGLA` do zoneamento não é global (`ZA` = 2 coisas diferentes) | Regra **nunca** por `sigla`; sem taxonomia global (D-009, #23) |
-| R2 | Falso positivo derruba a confiança | **Nunca descartar em silêncio** (D-010): severidade graduada + `possivel_falso_positivo` + citação do plano |
-| R2b | Sistema decidir o que é permitido | Não decidir: citar a zona e o plano (D-009, D-003) |
+| R2 | Falso positivo derruba a confiança | **Nunca descartar em silêncio** (D-010): severidade graduada + `possivel_falso_positivo`; alerta entrega o material, o gestor decide |
+| R2b | Sistema decidir o que é permitido | Não decidir: **informar** a zona verbatim e a coordenada, sem interpretação e sem instrução (D-009, D-011) |
+| R2c | Produto virar landing page / babá | Princípio de interface "instrumento, sem narrativa" (§9, D-011). Sem texto explicativo, sem tutorial, sem CTA |
+
 | R3 | Promessa de tempo real não se sustenta | comunicar "detecção NRT ≤1 h" + "risco diário"; nunca "previsão em tempo real" |
 | R4 | Chave/licença de fonte de focos | registrar termos por fonte → issue #07 |
 | R5 | Volume de tiles / custo de raster | titiler+COG com pyramid; cache; só janelas úteis |

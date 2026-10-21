@@ -68,8 +68,12 @@ Se um comando ainda não existe: registre em `ISSUES.md` e **não** declare pron
   escondida por supressão. Falso positivo não se resolve calando — resolve-se graduando
   a confiança e entregando o contexto. (D-010)
 - **O sistema não julga o que é permitido.** Quem decide é o **plano de gestão da
-  unidade**. A zona do plano entra no alerta como contexto e ponteiro, **nunca** como
-  critério de supressão. (D-009)
+  unidade**. A zona do plano entra no alerta como **fato** (verbatim + coordenada),
+  nunca como interpretação e nunca como critério de supressão. (D-009)
+- **Instrumento, não instrução.** Nada no produto orienta, lembra, explica ou
+  interpreta: nem alerta, nem painel, nem documento. Zero texto instrutivo, zero
+  tutorial, zero landing page, zero CTA. O destinatário é gestor de gerência regional
+  e sabe o que fazer com o material. (D-011)
 - **Não padronizar o zoneamento.** Cada plano de gestão nomeia e define as suas zonas;
   `sigla` não é global. Guardar verbatim. (D-009)
 - **Posição de foco é pixel, não coordenada.** GOES-16 ~750 m, VIIRS 375 m. Sempre exiba a

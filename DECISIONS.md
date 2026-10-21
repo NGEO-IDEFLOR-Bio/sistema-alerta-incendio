@@ -175,11 +175,47 @@ precisa ser atualizado — issue #22.
   significado do plano, captado plano a plano. Começa vazia. Issue #26.
 - Join UC ↔ zona por **sobreposição espacial** (o campo `UNIDADE` está truncado).
   Issue #23.
-- O alerta **cita a zona e o plano**: "Foco em <UC> — zona *<texto do plano>*.
-  O plano de gestão define o que é permitido ali; verificar antes de agir."
+- **O alerta informa a zona e a coordenada. Só.** Sem "verificar antes de agir", sem
+  lembrete sobre o plano, sem interpretação. O gestor sabe qual é o plano da própria
+  unidade — chamá-lo de instruir é chamar de imbecil (D-011).
 - Zona de Amortecimento (ZA) existe para poucas UCs — não é universal. Issue #25.
 - **Só depois da curadoria** a zona pode virar *feature* da frente A (§10). Antes disso,
   é contexto, não variável.
+
+---
+
+## D-011 — O sistema entrega instrumento, não instrução
+
+**Data:** 21/10/2026 · **Status:** vigente
+
+**O quê:** nenhum artefato do sistema — alerta, painel, mensagem, documento — **instrui,
+lembra, explica ou interpreta**. O sistema entrega **material factual** para tomada de
+decisão rápida; a leitura e a ação são do destinatário.
+
+**Por quê:** o destinatário é gestor de gerência regional do IDEFLOR-Bio. Ele conhece a
+unidade, o plano de gestão, o terreno e o que é um foco de calor. Um sistema que
+reescreve o plano para o gestor, ou que explica o básico, é paternalismo — e pior, é
+ruído que atrasa a decisão no momento em que ela precisa ser rápida.
+
+**Implica:**
+- **Alerta:** só fatos — UC, zona (verbatim), coordenada (decimal + UTM), horário,
+  severidade, confiança, nº de focos, fontes, link do mapa. Sem imperativo, sem
+  "atenção", sem "recomenda-se", sem definição de termo técnico, sem lembrete de plano.
+- **Sem "quem é o responsável" no corpo da mensagem** — o roteamento já entrega à
+  gerência certa. Fica no registro.
+- **Sem "ref_plano"** no payload do alerta: apontar para o plano é o começo da
+  instrução. A curadoria fica em `ucs_zonas_decisao`, que é registro interno do NGEO.
+- **Interface:** o app abre no mapa. Sem landing page, sem hero, sem scroll-telling,
+  sem CTA institucional, sem parágrafo explicativo, sem tooltip que defina termo.
+  Legenda de mapa é dado, não narrativa — permanece. Densidade alta, rótulos técnicos.
+- **Dashboard** é ferramenta de trabalho, não vitrine institucional.
+- **Escala de severidade permanece** — é uma leitura derivada da evidência, útil e
+  factual, não uma instrução. Mas os fatos brutos vão junto, para o gestor re-derivar.
+- **O portal público / scrollytelling saiu do plano** (F9 removido). Se um dia
+  precisar, é artefato da frente A, fora do caminho crítico.
+- Coerente com D-003 (a ação não é do NGEO) e D-010 (a incerteza é declarada, não
+  hideada por supressão).
+
 
 ---
 

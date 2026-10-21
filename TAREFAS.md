@@ -114,13 +114,28 @@ Tarefa: implementar a FASE F4.
 2. Canal email é o default e precisa funcionar ponta a ponta.
 3. Toda tentativa de entrega é registrada em entregas (canal, destinatario, status,
    resposta_http, erro, enviado_em). NUNCA perder o registro do que foi notificado.
-4. Template padrão: o quê (foco/pixel com incerteza), onde (UC + link no mapa), quando,
-   severidade, confiança (nº de focos, fontes concordantes), responsável da região.
+4. Template do alerta — só FATOS, nada instrutivo (D-011):
+   ```
+   FOCO DETECTADO — <data hora> BRT
+   UC ........ <nome> (<sigla>)
+   Zona ....... <sigla> <texto>          (se a UC tiver zoneamento)
+   Posição .... <lat> <lon>  (±<resolução> m)
+   Severidade . <BAIXA|MEDIA|ALTA|CRITICA>   Confiança: <ALTA|MEDIA|BAIXA>
+   Focos ...... <n> em <hh:mm>   Fontes: <lista>
+   [ abrir no mapa ]
+   ```
+   PROIBIDO no corpo do alerta: "verifique antes de agir", "atenção", "recomenda-se",
+   lembrete sobre o plano de gestão, definição de termo técnico, "quem é o responsável"
+   (o roteamento já entrega à gerência certa; fica no registro, não na mensagem).
+   Coordenada em decimal E em UTM (SIRGAS 2000, fuso 21S/22S) — EPSG resolvido no
+   código via pyproj, não fixado em doc.
 5. Idempotência: não reenviar o mesmo alerta no mesmo canal sem justificativa.
 6. Testes com servidor SMTP falso / mock do cliente HTTP.
+7. Teste de contrato do template: verificar que o corpo NUNCA contém os termos proibidos
+   acima. É o que garante que a regra não se perca na próxima refatoração.
 
-Regras: ruff + pytest OK; segredos só via .env/settings; atualizar ISSUES e RETOMADA.md;
-commit + push.
+Regras: ruff + pytest OK; segredos só via .env/settings; atualizar ISSUES e
+RETOMADA.md; commit + push.
 ```
 
 ---
@@ -142,6 +157,14 @@ Tarefa: implementar a FASE F5 (primeiro corte).
 6. Identidade: consumir ngeo-ds via CDN pinado. Se o repo ngeo-ds ainda não existir (#11),
    criar um tokens.css mínimo local com a paleta gov e registrar a issue.
 7. Modo claro e escuro.
+
+REGRAS DE PRODUTO (D-011) — não negociáveis:
+- O app abre DIRETO no mapa. Sem landing page, sem hero, sem scroll-telling, sem CTA.
+- Zero texto explicativo: nenhum parágrafo, nenhum tooltip que defina termo técnico
+  (FRP, zona de amortecimento, severidade). Legenda de mapa sim (é dado).
+- Rótulos curtos e técnicos: focos, FRP, severidade, confiança, janela.
+- Densidade alta: números na mesa, sem parágrafo em lugar nenhum.
+- Sem tutorial, sem onboarding, sem "saiba mais".
 
 Regras: npm run lint e npm run build OK; mapa carrega com dado real do backend (não mock);
 atualizar ISSUES e RETOMADA.md; commit + push.

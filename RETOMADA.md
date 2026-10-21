@@ -30,14 +30,20 @@
 
 ## Princípio que emerged das correções de 21/10/2026
 
-> **O sistema informa e qualifica; a decisão é do gestor, com base no plano de gestão.**
+> **O sistema entrega material; a leitura e a ação são do gestor.**
 >
-> Três consequência concretas: (1) alerta em zona de manejo **é emitido** — quem define
-> o que pode ou não pode é o plano da unidade, não o software (D-009); (2) **não existe
-> taxonomia global de zonas** — cada plano nomeia e define as suas, e nada é
-> padronizado (D-009); (3) **nada é descartado em silêncio** — a incerteza é declarada
-> no alerta (severidade, confiança, `possivel_falso_positivo`), não escondida por
-> supressão (D-010).
+> Quatro consequências concretas:
+> 1. Alerta em zona de manejo **é emitido** — quem define o que pode ou não pode é o
+>    plano da unidade, não o software (D-009).
+> 2. **Não existe taxonomia global de zonas** — cada plano nomeia e define as suas, e
+>    nada é padronizado (D-009).
+> 3. **Nada é descartado em silêncio** — a incerteza é declarada no alerta (severidade,
+>    confiança, `possivel_falso_positivo`), não escondida por supressão (D-010).
+> 4. **Instrumento, não instrução** — o produto não orienta, lembra, explica ou
+>    interpreta. Sem landing page, sem tutorial, sem "verifique antes de agir". O
+>    destinatário é gestor de gerência regional e sabe o que fazer com o material
+>    (D-011).
+
 
 ## Bloqueio
 
@@ -70,9 +76,12 @@ T2 (ingestão multi-fonte + dedup) → T3 (motor de regras) → T4 (entrega) →
 
 - Modelo de ML / SHAP (frente A) — repo próprio, fase F6.
 - Nowcast de propagação (frente B) — fase F7.
-- Portal público / scrollytelling — fase F9, sai como artefato da análise.
+- **Portal público / landing page / scrollytelling — removido do plano** (D-011).
+  Se um dia precisar, sai como artefato da frente A, fora do caminho crítico.
+- **Qualquer texto instrutivo no produto** — alerta, painel, relatório (D-011).
 - Migração de `maps` e `visualizador` para `ngeo-ds` — issues #08, #09.
 - Workflow de atendimento / estados do alerta — **decidido fora** (D-003).
+
 
 ## Como retomar
 
