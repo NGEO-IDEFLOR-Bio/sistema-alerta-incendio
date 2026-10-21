@@ -200,21 +200,10 @@ ucs_zonas (
   geom      geometry(Polygon,4326)
 );
 
--- 5.8 Curadoria por UC (preenchida pelo NGEO, começa vazia).
---     NÃO é padronização: é o que o plano de gestão DAQUELA UC diz sobre fogo
---     NAQUELA zona. Fonte de verdade = o plano, não um taxonomy inventado.
-ucs_zonas_decisao (
-  id          bigserial primary key,
-  uc_id       bigint not null references ucs(id),
-  sigla       text not null,                 -- igual ao da zona, sem normalizar
-  zona_texto  text,                          -- texto do plano, verbatim
-  permite_queima bool,                       -- null = ainda não curado
-  observacao  text,                          -- nota do curador
-  ref_plano   text,                          -- onde está o plano (documento/seção)
-  curado_por  text,
-  curado_em   timestamptz,
-  unique (uc_id, sigla)
-);
+-- 5.8 Curadoria por UC: NAO EXISTE.
+--     A zona do plano de gestão é INFORMAÇÃO, não variável. O sistema não avalia
+--     nem codifica permissão de fogo em zona alguma (D-009). O único uso da zona
+--     é constar do alerta, verbatim.
 ```
 
 ### 5.9 Camada de referência (entradas e proveniência)
@@ -421,12 +410,11 @@ regional. Não é vitrine, não é tutorial, não é página institucional.
   combustível (WorldCover/MapBiomas), distância a contratos de transição *(pasto em pousio =
   capim seco = combustível)*, distância a concessões *(TIPO A = pressão alta)*, borda de UC,
   estradas, distância a TI/quilombos, histórico de queima, densidade de raios.
-- **Zonas de plano de manejo: só depois da curadoria** (§5.8, D-009). Enquanto o NGEO não
-  tiver preenchido `ucs_zonas_decisao`, a zona **não entra como feature** — nem como
-  classe, nem por texto. Sem curadoria, qualquer encoding do texto da zona seria
-  interpretar o plano, e é exatamente isso que não se deve fazer. Depois da curadoria,
-  `permite_queima` por (UC, zona) é a feature que resolve o rótulo de fogo de manejo —
-  vinda do plano, não de mineração de texto.
+- **Zonas de plano de manejo: não entram como feature.** A zona é **informação** que
+  consta do alerta, verbatim (D-009). O sistema não avalia, não codifica e não infere
+  permissão de fogo em zona alguma — quem diz o que o plano permite é o plano.
+  Consequência aceita: o confundidor "fogo de manejo" **permanece como limitação
+  declarada** nos rótulos da frente A (§10), não como problema resolvido.
 
 - **Modelo:** XGBoost/LightGBM. **Validação:** *block CV espacial* + holdout temporal —
   nunca split aleatório sobre pixels (vazamento espacial).
@@ -502,6 +490,6 @@ como artefato da frente A, fora do caminho crítico.
 | R6 | Uso offline em campo sem sinal | service worker + Pacote da UC |
 | R7 | Deploy/credencial em ambiente institucional | `.env` por ambiente; nada sensível no git (D-003, D-006) |
 | R8 | Zoneamento cobre só 16/29 UCs | alerta segue emitido **sem** contexto de zona, com limitação explícita (#24) |
-| R9 | Curadoria de zonas atrasa e trava a frente A | `ucs_zonas_decisao` começa vazia e **não bloqueia** o MVP (#26) |
+| R9 | Confundidor "fogo de manejo" nos rótulos | **Limitação declarada**, não resolvida: a zona não entra como feature e não é curada. Declarar no model card e no paper (§10) |
 
 

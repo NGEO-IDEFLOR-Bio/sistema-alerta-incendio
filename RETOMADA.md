@@ -56,9 +56,6 @@
     corrigida (#21), mas todo re-download reintroduz. Requer ação upstream.
   - #30 — sigla **GRM** (Marajó) consta do shapefile, não da página "Shapes de cada
     unidade".
-  - #26 — curadoria por UC do que o plano diz sobre fogo em cada zona (preenche
-    `ucs_zonas_decisao`, hoje vazia). Não bloqueia o MVP; habilita a feature de zona
-    na frente A.
   - #24 — zoneamento para as 13 UCs restantes.
   - #25 — Zonas de Amortecimento para as UCs que não têm.
   - #07 — termos de uso/atribuição por fonte de focos.

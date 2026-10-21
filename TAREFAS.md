@@ -31,9 +31,10 @@ Tarefa: implementar a FASE F1 do plano.
    - resolver uc_id por SOBREPOSIÇÃO ESPACIAL (centroide contido / maior área de
      interseção), NUNCA pelo campo UNIDADE (está truncado) — issue #23
    - guardar sigla e zona VERBATIM. NÃO normalizar, NÃO mapear para classe global,
-     NÃO renomear: cada plano de gestão define suas próprias zonas (D-009).
-   - criar a tabela ucs_zonas_decisao VAZIA, para curadoria do NGEO (issue #26)
-   - NÃO classificar zona em 'manejo'/'amortecimento'/'protecao' automaticamente
+     NÃO renomear: cada plano de gestão define suas próprias zonas (D-009)
+   - a zona é INFORMAÇÃO que consta do alerta. Não criar tabela de curadoria, não
+     avaliar permissão de fogo, não codificar classe (issue #26 descartada)
+
 7. Teste de integridade do seed: exatamente 29 UCs, exatamente 9 gerências, todo
    uc.gerencia_id resolvido (issue #21). Falhar se não bater.
 8. GET /api/health devolvendo status do DB, versão do schema e contagens
@@ -41,7 +42,7 @@ Tarefa: implementar a FASE F1 do plano.
 
 Regras: ruff check . e ruff format --check . e pytest -q OK; docker compose config válido;
 NÃO buildar imagem de produção; NÃO commitar .env nem dados (data/ é gitignored);
-atualizar ISSUES (#03, #04, #21, #23, #24, #26) e RETOMADA.md no mesmo commit;
+atualizar ISSUES (#03, #04, #21, #23, #24) e RETOMADA.md no mesmo commit;
 commit pequeno + push.
 
 Notas:

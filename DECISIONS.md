@@ -179,17 +179,18 @@ portal grafa "Calha Norte l/ll/lll" e repete a mesma substituição em `UMF l/ll
 - `ucs_zonas` guarda os valores **como o plano os escreveu**. Sem `zona_norm`, sem
   `classe` global, sem renomear nada.
 - Regra de negócio **nunca** usa `sigla` como chave. Issue #23.
-- Tabela nova `ucs_zonas_decisao`: **curadoria por UC**, feita pelo NGEO, com o que o
-  plano da *aquela* UC diz sobre fogo naquela zona. Não é padronização — é o
-  significado do plano, captado plano a plano. Começa vazia. Issue #26.
+- **Não existe tabela de curadoria.** O sistema não avalia, não codifica e não infere
+  permissão de fogo em zona alguma. A zona é **informação** que consta do alerta.
+  Issue #26 (descartada).
 - Join UC ↔ zona por **sobreposição espacial** (o campo `UNIDADE` está truncado).
   Issue #23.
-- **O alerta informa a zona e a coordenada. Só.** Sem "verificar antes de agir", sem
+- O alerta **informa a zona e a coordenada. Só.** Sem "verificar antes de agir", sem
   lembrete sobre o plano, sem interpretação. O gestor sabe qual é o plano da própria
   unidade — chamá-lo de instruir é chamar de imbecil (D-011).
 - Zona de Amortecimento (ZA) existe para poucas UCs — não é universal. Issue #25.
-- **Só depois da curadoria** a zona pode virar *feature* da frente A (§10). Antes disso,
-  é contexto, não variável.
+- **A zona não é feature** da frente A. O confundidor "fogo de manejo" nos rótulos
+  permanece como **limitação declarada**, não como problema resolvido (§10).
+
 
 ---
 
@@ -213,7 +214,7 @@ ruído que atrasa a decisão no momento em que ela precisa ser rápida.
 - **Sem "quem é o responsável" no corpo da mensagem** — o roteamento já entrega à
   gerência certa. Fica no registro.
 - **Sem "ref_plano"** no payload do alerta: apontar para o plano é o começo da
-  instrução. A curadoria fica em `ucs_zonas_decisao`, que é registro interno do NGEO.
+  instrução. A zona entra como informação verbatim e só.
 - **Interface:** o app abre no mapa. Sem landing page, sem hero, sem scroll-telling,
   sem CTA institucional, sem parágrafo explicativo, sem tooltip que defina termo.
   Legenda de mapa é dado, não narrativa — permanece. Densidade alta, rótulos técnicos.
